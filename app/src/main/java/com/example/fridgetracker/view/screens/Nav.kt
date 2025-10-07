@@ -11,15 +11,25 @@ import com.example.fridgetracker.view_model.ProductViewModel
 fun AppNavHost(productViewModel: ProductViewModel) {
     val navController = rememberNavController()
     NavHost(navController = navController, startDestination = "home") {
-        composable("home") { HomeScreen(onAdd = { navController.navigate("add") }, onOpen = { id -> navController.navigate("detail/$id") },
+        composable("home") { HomeScreen(onAdd = { navController.navigate("add") }, onOpen = { id -> navController.navigate("edit/$id") },
             vm = productViewModel) }
-        composable("add") { AddProductScreen(navController = navController, vm = productViewModel) }
+        composable("add") {
+            EditProductScreen(
+            navController = navController,
+            vm = productViewModel,
+            productId = null
+            )
+        }
         composable("scan") {
             ScanScreen(navController = navController, vm = productViewModel)
         }
-        composable("detail/{id}") { backStackEntry ->
+        composable("edit/{id}") { backStackEntry ->
             val id = backStackEntry.arguments?.getString("id")?.toLongOrNull()
-            ProductDetailScreen(productId = id ?: 0L, onBack = { navController.popBackStack() }, vm = productViewModel)
+            EditProductScreen(
+                navController = navController,
+                vm = productViewModel,
+                productId = id // Edit mode
+            )
         }
     }
 }

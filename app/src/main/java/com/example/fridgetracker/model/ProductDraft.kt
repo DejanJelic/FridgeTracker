@@ -6,5 +6,7 @@ data class ProductDraft(
     val quantity: Double = 1.0,
     val unit: String = "pcs",
     val daysUntilExpiry: Int = 7,
-    val location: String? = "Fridge"
+    val location: String? = "Fridge",
+    val imageUrl: String? = null,
+    val category: String? = null
 )

@@ -64,6 +64,12 @@ dependencies {
     implementation(libs.androidx.camera.view)
     //Coil
     implementation(libs.androidx.coil)
+    // Retrofit for API call
+    implementation(libs.androidx.retrofit)
+    implementation(libs.androidx.converter.gson)
+    implementation(libs.androidx.logging.interceptor)
+    // Gson
+    implementation(libs.androidx.gson)
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
