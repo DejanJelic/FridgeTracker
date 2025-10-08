@@ -72,6 +72,9 @@ dependencies {
     // Gson
     implementation(libs.androidx.gson)
 
+    implementation(libs.androidx.accompanist.pager)
+    implementation(libs.androidx.accompanist.indicators)
+
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)
