@@ -15,5 +15,11 @@ data class Product(
     val location: String? = "Fridge",
     val photoUri: String? = null,
     val barcode: String? = null,
-    val category: String? = null
+    val category: String? = null,
+    val comment: String? = null,
+    val price: String? = null,
+    val notifyExpiry: Boolean = true,
+    val expiryDaysBefore: Int = 4,
+    val notifyAfterOpening: Boolean = true,
+    val afterOpeningDays: Int = 2
 )

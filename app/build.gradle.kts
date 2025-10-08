@@ -7,7 +7,7 @@ plugins {
 
 android {
     namespace = "com.example.fridgetracker"
-    compileSdk = 34
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.example.fridgetracker"
@@ -53,6 +53,7 @@ dependencies {
     //Room
     implementation(libs.androidx.room.runtime)
     implementation(libs.androidx.room.ktx)
+    implementation(libs.androidx.foundation)
     kapt(libs.androidx.room.compiler)
     //Work
     implementation(libs.androidx.work)

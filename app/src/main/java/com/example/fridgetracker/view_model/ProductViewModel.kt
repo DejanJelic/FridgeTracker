@@ -6,6 +6,7 @@ import com.example.fridgetracker.repository.ProductRepository
 import com.example.fridgetracker.model.Product
 import com.example.fridgetracker.model.ProductDraft
 import com.example.fridgetracker.model.ProductInfo
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -25,7 +26,7 @@ class ProductViewModel(private val repo: ProductRepository) : ViewModel() {
     suspend fun findByBarcode(barcode: String): Product? = repo.findByBarcode(barcode)
     fun upsert(product: Product) = viewModelScope.launch { repo.upsert(product) }
     fun delete(product: Product) = viewModelScope.launch { repo.delete(product) }
-    fun getProductFlow(id: Long) = repo.observeById(id)
+    fun getProductFlow(id: Long): Flow<Product?> = repo.observeById(id)
     suspend fun lookupBarcodeOnline(barcode: String): ProductInfo? {
         return repo.lookupBarcode(barcode)
     }

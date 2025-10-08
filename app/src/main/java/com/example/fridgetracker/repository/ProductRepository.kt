@@ -1,17 +1,52 @@
 package com.example.fridgetracker.repository
 
+import android.content.Context
 import android.util.Log
 import com.example.fridgetracker.data.ProductDao
 import com.example.fridgetracker.data.RetrofitInstance
 import com.example.fridgetracker.model.Product
 import com.example.fridgetracker.model.ProductInfo
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.withContext
 
-class ProductRepository(private val dao: ProductDao) {
+class ProductRepository(private val dao: ProductDao, private val context: Context) {
     fun observeAll(): Flow<List<Product>> = dao.observeAll()
     fun observeById(id:Long): Flow<Product?> = dao.observeById(id)
-    suspend fun upsert(product: Product) = dao.upsert(product)
-    suspend fun delete(product: Product) = dao.delete(product)
+    suspend fun upsert(product: Product) {
+        withContext(kotlinx.coroutines.Dispatchers.IO) {
+            // ako je update (id != 0), dohvatimo staru vrednost da bismo kasnije obrisali staru sliku
+            val old = if (product.id != 0L) dao.getById(product.id) else null
+
+            // upsert u DB (insert onConflict=REPLACE)
+            dao.upsert(product)
+
+            // Ukoliko je stara slika bila interna i različita od nove, izbriši je
+            try {
+                val oldUri = old?.photoUri
+                val newUri = product.photoUri
+                if (!oldUri.isNullOrBlank() && oldUri != newUri) {
+                    com.example.fridgetracker.utilities.ImageFileUtils.deleteInternalFileIfExists(oldUri, context)
+                }
+            } catch (t: Throwable) {
+                // loguj, ali ne prekidaj tok
+                android.util.Log.w("ProductRepository", "Failed to delete old image", t)
+            }
+        }
+    }
+    suspend fun delete(product: Product) {
+        withContext(kotlinx.coroutines.Dispatchers.IO) {
+            try {
+                // pokušaj prvo obrisati fajl (neobavezno: može i obrnuto)
+                com.example.fridgetracker.utilities.ImageFileUtils.deleteInternalFileIfExists(product.photoUri, context)
+            } catch (t: Throwable) {
+                android.util.Log.w("ProductRepository", "Failed to delete product image on delete", t)
+            }
+
+            // onda izbriši iz DB
+            dao.delete(product)
+        }
+    }
+
     suspend fun findByBarcode(barcode: String): Product? = dao.getByBarcode(barcode)
     suspend fun getExpiringBefore(threshold: Long) = dao.getExpiringBefore(threshold)
     suspend fun lookupBarcode(barcode: String): ProductInfo? {

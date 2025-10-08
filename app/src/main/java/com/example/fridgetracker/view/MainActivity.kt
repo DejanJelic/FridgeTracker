@@ -32,7 +32,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val dao = AppDatabase.getInstance(application).productDao()
-        val repo = ProductRepository(dao)
+        val repo = ProductRepository(dao,application.applicationContext)
         val factory = ProductViewModelFactory(repo)
         setContent {
             RequestNotificationsWithMemory()

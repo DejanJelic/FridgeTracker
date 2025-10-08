@@ -2,7 +2,6 @@ package com.example.fridgetracker.view.barcode
 
 import android.widget.Toast
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -13,37 +12,6 @@ import com.example.fridgetracker.view_model.ProductViewModel
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.platform.LocalContext
 import kotlinx.coroutines.launch
-
-//@Composable
-//fun ScanScreen(navController: NavController, vm: ProductViewModel) {
-//    var handled by remember { mutableStateOf(false) }
-//    var detectedCode by remember { mutableStateOf<String?>(null) }
-//
-//    BarcodeScannerScreen { code ->
-//        if (handled) return@BarcodeScannerScreen
-//        handled = true
-//        detectedCode = code
-//    }
-//
-//    LaunchedEffect(detectedCode) {
-//        val code = detectedCode
-//        if (code.isNullOrBlank()) {
-//            navController.popBackStack()
-//            return@LaunchedEffect
-//        }
-//        val existing = vm.findByBarcode(code)
-//        if (existing != null) {
-//            navController.navigate("detail/${existing.id}") {
-//                popUpTo("home") { inclusive = false }
-//            }
-//        } else {
-//            vm.setPrefill(ProductDraft(barcode = code, name = "Scanned: $code"))
-//            navController.navigate("add") {
-//                popUpTo("home") { inclusive = false }
-//            }
-//        }
-//    }
-//}
 @Composable
 fun ScanScreen(navController: NavController, vm: ProductViewModel) {
     var handled by remember { mutableStateOf(false) }
@@ -55,23 +23,11 @@ fun ScanScreen(navController: NavController, vm: ProductViewModel) {
         handled = true
 
         scope.launch {
-            // Prvo proveri u lokalnoj bazi
-            val existing = vm.findByBarcode(code)
-            if (existing != null) {
-                // Pronađen lokalno
-                navController.navigate("detail/${existing.id}") {
-                    popUpTo("home") { inclusive = false }
-                }
-                return@launch
-            }
-
-            // Ako nije pronađen lokalno, pozovi API
             Toast.makeText(context, "Looking up product...", Toast.LENGTH_SHORT).show()
 
             val productInfo = vm.lookupBarcodeOnline(code)
 
             if (productInfo != null) {
-                // Proizvod pronađen online
                 val category = productInfo.categories?.split(",")?.firstOrNull()?.trim() ?: "No category"
 
                 vm.setPrefill(ProductDraft(
