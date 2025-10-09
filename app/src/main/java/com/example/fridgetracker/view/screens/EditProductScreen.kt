@@ -193,6 +193,8 @@ fun EditProductScreen(
                         Icon(Icons.Default.Close, contentDescription = "Cancel")
                     }
                 },
+                backgroundColor = Color(0xFF6A1B9A),
+                contentColor = Color.White,
                 actions = {
                     IconButton(onClick = {
                         // VALIDATION + SAVE with loader (await using suspend vm method)
@@ -271,7 +273,7 @@ fun EditProductScreen(
                             }
                         }
                     }) {
-                        Icon(Icons.Default.Check, contentDescription = "Save")
+                        Icon(Icons.Default.Check, contentDescription = "Save", tint = Color.White)
                     }
                 }
             )
@@ -381,7 +383,7 @@ fun EditProductScreen(
 
                         // Quantity: label fixed width so not clipped; inline numeric edit field styled as expiry
                         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-                            Text("Quantity", modifier = Modifier.width(110.dp), style = MaterialTheme.typography.body1, maxLines = 1)
+                            Text("Quantity", modifier = Modifier.width(70.dp), style = MaterialTheme.typography.body1, maxLines = 1)
                             IconButton(onClick = { if (quantity > 1.0) quantity -= 1.0 }, modifier = Modifier.size(40.dp)) { Text("-", style = MaterialTheme.typography.h5) }
 
                             if (editingQuantity) {
@@ -389,7 +391,7 @@ fun EditProductScreen(
                                     value = manualQuantityText,
                                     onValueChange = { manualQuantityText = it.filter { c -> c.isDigit() } },
                                     singleLine = true,
-                                    modifier = Modifier.width(120.dp),
+                                    modifier = Modifier.width(90.dp),
                                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                                     trailingIcon = {
                                         IconButton(onClick = {
@@ -401,6 +403,13 @@ fun EditProductScreen(
                                         }
                                     }
                                 )
+//                                OutlinedTextField(
+//                                    value = manualQuantityText,
+//                                    onValueChange = { manualQuantityText = it.filter { c -> c.isDigit() } },
+//                                    modifier = Modifier.width(100.dp),
+//                                    singleLine = true,
+//                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+//                                )
                             } else {
                                 Surface(modifier = Modifier.width(80.dp), shape = RoundedCornerShape(8.dp), border = BorderStroke(1.dp, MaterialTheme.colors.onSurface.copy(alpha = 0.12f))) {
                                     Text(text = quantity.toInt().toString(), modifier = Modifier
@@ -471,7 +480,7 @@ fun EditProductScreen(
                                     label = { Text("Days") }, modifier = Modifier.width(140.dp), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), singleLine = true)
                             }
                             val daysVal = daysUntilExpiryStr.toLongOrNull() ?: 30L
-                            Text("=> " + purchaseDate.plusDays(daysVal).toString(), modifier = Modifier.padding(start = 12.dp))
+                            Text( purchaseDate.plusDays(daysVal).toString(), modifier = Modifier.padding(start = 12.dp))
                             Spacer(modifier = Modifier.width(8.dp))
                             IconButton(onClick = { showDatePicker(context = context, initial = purchaseDate) { d -> purchaseDate = d } }) {
                                 Icon(Icons.Default.DateRange, contentDescription = "Pick best before")
@@ -553,7 +562,7 @@ fun EditProductScreen(
 
                         Text("Price")
                         OutlinedTextField(value = price, onValueChange = { price = it.filter { c -> c.isDigit() || c == '.' } },
-                            modifier = Modifier.fillMaxWidth(), placeholder = { Text("€") }, trailingIcon = { Text("€", modifier = Modifier.padding(end = 8.dp)) },
+                            modifier = Modifier.fillMaxWidth(), placeholder = { Text("") }, trailingIcon = { Text("€", modifier = Modifier.padding(end = 8.dp)) },
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), singleLine = true)
                     }
                 }
@@ -590,7 +599,7 @@ fun EditProductScreen(
                                 OutlinedTextField(value = afterOpeningDays, onValueChange = { afterOpeningDays = it.filter { c -> c.isDigit() } },
                                     modifier = Modifier.width(100.dp), singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number))
                                 Spacer(modifier = Modifier.width(8.dp))
-                                Text("days", modifier = Modifier.align(Alignment.CenterVertically))
+                                Text("days", modifier = Modifier.align(Alignment.CenterVertically).padding(end = 42.dp))
                             }
                         }
                     }

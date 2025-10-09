@@ -1,5 +1,7 @@
 package com.example.fridgetracker.view.screens
 
+import androidx.compose.animation.*
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -7,6 +9,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -18,6 +21,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -33,12 +37,10 @@ import com.google.accompanist.pager.*
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.TextUnit
-import androidx.compose.ui.window.Dialog
-import androidx.compose.foundation.layout.Arrangement
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
-@OptIn(ExperimentalPagerApi::class)
+@OptIn(ExperimentalPagerApi::class, ExperimentalAnimationApi::class)
 @Composable
 fun HomeScreen(
     navController: NavController,
@@ -58,12 +60,22 @@ fun HomeScreen(
     val tabTitles = listOf("All", "Ready", "Opened", "Expired")
     val pagerState = rememberPagerState(initialPage = 0)
 
-    // Filter / Sort state
-    var showFilterDialog by remember { mutableStateOf(false) }
+    // Filter / Sort / Panel state
+    var panelOpen by remember { mutableStateOf(false) } // slide-in panel
     var selectedSort by remember { mutableStateOf(SortOption.BEST_BEFORE) }
     var ascending by remember { mutableStateOf(true) }
 
-    // Page loader state: shown during applying sort / while pager scrolls
+    // Multi-field filter state (UI values)
+    var selectedCategoryUI by remember { mutableStateOf("All") } // "All" means no filter
+    var minQtyText by remember { mutableStateOf("") } // numeric string
+    var maxQtyText by remember { mutableStateOf("") }
+
+    // Applied filter values (used to compute lists)
+    var appliedCategory by remember { mutableStateOf<String?>(null) } // null = all
+    var appliedMinQty by remember { mutableStateOf<Double?>(null) }
+    var appliedMaxQty by remember { mutableStateOf<Double?>(null) }
+
+    // Page loader state
     var isLoading by remember { mutableStateOf(false) }
 
     // Helper status functions (product-level)
@@ -71,22 +83,38 @@ fun HomeScreen(
     fun Product.isOpened(): Boolean = this.openedAtEpochDay != null
     fun Product.isReady(): Boolean = !isOpened() && !isExpired() && this.quantity > 0.0
 
-    // Search applied across whole dataset (memoized)
-    val searched = remember(products, query) {
-        if (query.isBlank()) products
-        else products.filter { p ->
-            p.name.contains(query, ignoreCase = true) ||
+    // Derived list of categories (from products) for filter dropdown, include "All" first
+    val categories = remember(products) {
+        val fromProducts = products.mapNotNull { it.category?.takeIf { c -> c.isNotBlank() } }.distinct().sorted()
+        listOf("All") + fromProducts
+    }
+
+    // Search + applied filters: memoized
+    val filtered = remember(products, query, appliedCategory, appliedMinQty, appliedMaxQty) {
+        products.filter { p ->
+            // search match
+            val matchesQuery = query.isBlank() ||
+                    p.name.contains(query, ignoreCase = true) ||
                     (p.barcode?.contains(query, ignoreCase = true) ?: false)
+
+            // category match
+            val matchesCategory = appliedCategory == null || appliedCategory == "All" || (p.category ?: "").equals(appliedCategory ?: "", ignoreCase = true)
+
+            // qty match
+            val matchesMin = appliedMinQty?.let { p.quantity >= it } ?: true
+            val matchesMax = appliedMaxQty?.let { p.quantity <= it } ?: true
+
+            matchesQuery && matchesCategory && matchesMin && matchesMax
         }
     }
 
-    // Counts for tabs (based on current search)
-    val counts = remember(searched) {
+    // Counts for tabs (based on filtered)
+    val counts = remember(filtered) {
         listOf(
-            searched.size,
-            searched.count { it.isReady() },
-            searched.count { it.isOpened() },
-            searched.count { it.isExpired() }
+            filtered.size,
+            filtered.count { it.isReady() },
+            filtered.count { it.isOpened() },
+            filtered.count { it.isExpired() }
         )
     }
 
@@ -102,22 +130,21 @@ fun HomeScreen(
         return if (asc) result else result.reversed()
     }
 
-    // Lists by tab with current sort
-    val listsByTab = remember(searched, selectedSort, ascending) {
+    // Lists by tab with current sort applied to the filtered dataset
+    val listsByTab = remember(filtered, selectedSort, ascending) {
         listOf(
-            sortList(searched, selectedSort, ascending), // All
-            sortList(searched.filter { it.isReady() }, selectedSort, ascending),
-            sortList(searched.filter { it.isOpened() }, selectedSort, ascending),
-            sortList(searched.filter { it.isExpired() }, selectedSort, ascending)
+            sortList(filtered, selectedSort, ascending), // All
+            sortList(filtered.filter { it.isReady() }, selectedSort, ascending),
+            sortList(filtered.filter { it.isOpened() }, selectedSort, ascending),
+            sortList(filtered.filter { it.isExpired() }, selectedSort, ascending)
         )
     }
 
-    // when pager scrolls show a small loader overlay (visual nicety)
+    // Pager scroll -> show a small loader for nicety
     LaunchedEffect(pagerState.isScrollInProgress) {
         if (pagerState.isScrollInProgress) {
             isLoading = true
         } else {
-            // small delay to smooth flicker
             delay(80)
             isLoading = false
         }
@@ -135,7 +162,7 @@ fun HomeScreen(
                             TextField(
                                 value = query,
                                 onValueChange = { query = it },
-                                placeholder = { Text("Search by name or barcode") },
+                                placeholder = { Text("Search by name") },
                                 singleLine = true,
                                 modifier = Modifier.fillMaxWidth(),
                                 colors = TextFieldDefaults.textFieldColors(
@@ -165,13 +192,13 @@ fun HomeScreen(
                                 Icon(Icons.Default.Close, contentDescription = "Close search")
                             }
                         }
-                        IconButton(onClick = { showFilterDialog = true }) {
+                        IconButton(onClick = { panelOpen = true }) {
                             Icon(Icons.Default.FilterList, contentDescription = "Filter/Sort")
                         }
                     }
                 )
 
-                // TabRow with badge (tab label bold); badge moved slightly right and up so it doesn't cover label
+                // TabRow with badge; badge positioned to the right/top so it doesn't overlap label
                 TabRow(selectedTabIndex = pagerState.currentPage, backgroundColor = MaterialTheme.colors.surface) {
                     tabTitles.forEachIndexed { index, title ->
                         Tab(
@@ -187,8 +214,7 @@ fun HomeScreen(
                                 )
                                 val count = counts.getOrElse(index) { 0 }
                                 if (count > 0) {
-                                    // place badge to the right, slightly above text baseline
-                                    Badge(
+                                    SmallBadge(
                                         count = count,
                                         modifier = Modifier
                                             .align(Alignment.TopEnd)
@@ -218,15 +244,14 @@ fun HomeScreen(
             }
         }
     ) { padding ->
-        Box(modifier = Modifier.padding(padding)) {
+        Box(modifier = Modifier.fillMaxSize().padding(padding)) {
             // HorizontalPager (swipe + animation)
             HorizontalPager(count = tabTitles.size, state = pagerState, modifier = Modifier.fillMaxSize()) { page ->
                 val pageList = listsByTab.getOrElse(page) { emptyList() }
 
-                // Group by location in desired order: Larder, Fridge, Freezer, Pantry, Not stored (others after)
+                // Group by location in desired order
                 val orderedLocations = listOf("Larder", "Fridge", "Freezer", "Pantry", "Not stored")
                 val groupedMap = pageList.groupBy { it.location ?: "Not stored" }
-                // Convert to list of pairs and sort by index in orderedLocations
                 val groupedSorted = groupedMap.toList().sortedWith(compareBy { (loc, _) ->
                     val idx = orderedLocations.indexOfFirst { it.equals(loc, ignoreCase = true) }
                     if (idx >= 0) idx else orderedLocations.size
@@ -248,7 +273,7 @@ fun HomeScreen(
                 }
             }
 
-            // Page loader overlay: centered spinner with translucent background
+            // Page loader overlay
             if (isLoading) {
                 Box(
                     modifier = Modifier
@@ -264,33 +289,149 @@ fun HomeScreen(
                 }
             }
 
-            // Filter dialog UI (stylized right-panel)
-            if (showFilterDialog) {
-                RightStyleFilterDialog(
-                    initial = selectedSort,
-                    ascendingInitial = ascending,
-                    onApply = { newSort, asc ->
-                        // show loader briefly while applying sort so UI feels responsive
-                        coroutineScope.launch {
-                            isLoading = true
-                            // small delay to let user see loader; in real app this would be the actual sort/filter operation
-                            delay(300)
-                            selectedSort = newSort
-                            ascending = asc
-                            isLoading = false
-                            showFilterDialog = false
+            // Slide-in panel from right for filter/sort
+            AnimatedVisibility(
+                visible = panelOpen,
+                enter = slideInHorizontally(animationSpec = tween(durationMillis = 300), initialOffsetX = { fullWidth -> fullWidth }) + fadeIn(),
+                exit = slideOutHorizontally(animationSpec = tween(durationMillis = 260), targetOffsetX = { fullWidth -> fullWidth }) + fadeOut(),
+                modifier = Modifier.align(Alignment.CenterEnd)
+            ) {
+                // Panel card
+                Card(
+                    modifier = Modifier
+                        .fillMaxHeight()
+                        .width(320.dp)
+                        .padding(12.dp),
+                    shape = RoundedCornerShape(8.dp),
+                    elevation = 12.dp
+                ) {
+                    Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
+                            Text("Filters & Sort", fontWeight = FontWeight.Bold)
+                            IconButton(onClick = { panelOpen = false }) { Icon(Icons.Default.Close, contentDescription = "Close") }
                         }
-                    },
-                    onCancel = { showFilterDialog = false }
-                )
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        // Category dropdown
+                        Text("Category", style = MaterialTheme.typography.caption)
+                        var expandedCat by remember { mutableStateOf(false) }
+                        Box {
+                            OutlinedButton(onClick = { expandedCat = true }, modifier = Modifier.fillMaxWidth()) {
+                                Text(selectedCategoryUI)
+                                Spacer(Modifier.weight(1f))
+                                Icon(Icons.Default.ArrowDropDown, contentDescription = null)
+                            }
+                            DropdownMenu(expanded = expandedCat, onDismissRequest = { expandedCat = false }) {
+                                categories.forEach { c ->
+                                    DropdownMenuItem(onClick = { selectedCategoryUI = c; expandedCat = false }) {
+                                        Text(c)
+                                    }
+                                }
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        // Min/Max Quantity inputs
+                        Text("Remaining quantity (min / max)", style = MaterialTheme.typography.caption)
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            OutlinedTextField(
+                                value = minQtyText,
+                                onValueChange = { minQtyText = it.filter { ch -> ch.isDigit() || ch == '.' } },
+                                modifier = Modifier.weight(1f),
+                                placeholder = { Text("min") },
+                                singleLine = true,
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            )
+                            OutlinedTextField(
+                                value = maxQtyText,
+                                onValueChange = { maxQtyText = it.filter { ch -> ch.isDigit() || ch == '.' } },
+                                modifier = Modifier.weight(1f),
+                                placeholder = { Text("max") },
+                                singleLine = true,
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        // Sort options
+                        Text("Sort by", style = MaterialTheme.typography.caption)
+                        val options = listOf(
+                            Pair(SortOption.NAME, "Name"),
+                            Pair(SortOption.PURCHASE_DATE, "Purchase date"),
+                            Pair(SortOption.BEST_BEFORE, "Best before"),
+                            Pair(SortOption.REMAINING_QTY, "Remaining quantity"),
+                            Pair(SortOption.CATEGORY, "Category")
+                        )
+                        var currentSortLocal by remember { mutableStateOf(selectedSort) }
+                        Column {
+                            options.forEach { (opt, label) ->
+                                Row(modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable { currentSortLocal = opt }
+                                    .padding(vertical = 8.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    RadioButton(selected = currentSortLocal == opt, onClick = { currentSortLocal = opt })
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(label)
+                                }
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text("Ascending")
+                            Spacer(modifier = Modifier.width(12.dp))
+                            var ascLocal by remember { mutableStateOf(ascending) }
+                            Switch(checked = ascLocal, onCheckedChange = { ascLocal = it }, colors = SwitchDefaults.colors(checkedThumbColor = Color(0xFFFFC107)))
+                            Spacer(modifier = Modifier.weight(1f))
+                            // Reset button
+                            TextButton(onClick = {
+                                selectedCategoryUI = "All"
+                                minQtyText = ""
+                                maxQtyText = ""
+                                currentSortLocal = SortOption.BEST_BEFORE
+                                ascLocal = true
+                            }) {
+                                Text("RESET")
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        // Apply button
+                        Button(onClick = {
+                            // parse numeric fields
+                            val min = minQtyText.toDoubleOrNull()
+                            val max = maxQtyText.toDoubleOrNull()
+                            // apply (update applied state)
+                            appliedCategory = if (selectedCategoryUI == "All") null else selectedCategoryUI
+                            appliedMinQty = min
+                            appliedMaxQty = max
+                            selectedSort = currentSortLocal
+//                            ascending = ascLocal
+                            // brief loader visual
+                            coroutineScope.launch {
+                                isLoading = true
+                                delay(250)
+                                isLoading = false
+                                panelOpen = false
+                            }
+                        }, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(backgroundColor = Color(0xFFFFC107))) {
+                            Text("APPLY", color = Color.Black)
+                        }
+                    }
+                }
             }
         }
     }
 }
 
-/** Badge: small red top-notch */
+/** Small top badge (not overlapping text) */
 @Composable
-fun Badge(count: Int, modifier: Modifier = Modifier, size: Dp = 24.dp, textSize: TextUnit = 12.sp) {
+fun SmallBadge(count: Int, modifier: Modifier = Modifier, size: Dp = 18.dp, textSize: TextUnit = 10.sp) {
     Box(
         modifier = modifier
             .size(size)
@@ -302,89 +443,6 @@ fun Badge(count: Int, modifier: Modifier = Modifier, size: Dp = 24.dp, textSize:
     }
 }
 
-/** Right-panel style filter dialog (custom Dialog) */
-@Composable
-fun RightStyleFilterDialog(
-    initial: SortOption,
-    ascendingInitial: Boolean,
-    onApply: (SortOption, Boolean) -> Unit,
-    onCancel: () -> Unit
-) {
-    var current by remember { mutableStateOf(initial) }
-    var asc by remember { mutableStateOf(ascendingInitial) }
-
-    Dialog(onDismissRequest = onCancel) {
-        // Card styled panel (narrower, nicer buttons)
-        Card(
-            modifier = Modifier
-                .fillMaxHeight()
-                .width(280.dp)
-                .padding(end = 8.dp),
-            backgroundColor = Color(0xFF4A148C),
-            shape = RoundedCornerShape(topStart = 8.dp, bottomStart = 8.dp),
-            elevation = 8.dp
-        ) {
-            Column(modifier = Modifier.padding(14.dp)) {
-                // Header row with title + close
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
-                    Text("Sort / Filter", color = Color.White, fontWeight = FontWeight.Bold)
-                    IconButton(onClick = onCancel) { Icon(Icons.Default.Close, tint = Color.White, contentDescription = "Close") }
-                }
-                Spacer(modifier = Modifier.height(8.dp))
-
-                // Options (radio) - styled: white text, gold accent
-                val options = listOf(
-                    Pair(SortOption.NAME, "Name"),
-                    Pair(SortOption.PURCHASE_DATE, "Purchase date"),
-                    Pair(SortOption.BEST_BEFORE, "Best before"),
-                    Pair(SortOption.REMAINING_QTY, "Remaining quantity"),
-                    Pair(SortOption.CATEGORY, "Category")
-                )
-
-                options.forEach { (opt, label) ->
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { current = opt }
-                            .padding(vertical = 8.dp)
-                    ) {
-                        RadioButton(
-                            selected = (current == opt),
-                            onClick = { current = opt },
-                            colors = RadioButtonDefaults.colors(selectedColor = Color(0xFFFFC107), unselectedColor = Color(0x80FFC107))
-                        )
-                        Spacer(modifier = Modifier.width(12.dp))
-                        Text(text = label, color = Color.White)
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(10.dp))
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("Ascending", color = Color.White)
-                    Spacer(modifier = Modifier.width(12.dp))
-                    Switch(checked = asc, onCheckedChange = { asc = it }, colors = SwitchDefaults.colors(checkedThumbColor = Color(0xFFFFC107)))
-                }
-
-                Spacer(modifier = Modifier.height(16.dp))
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                    TextButton(onClick = onCancel) {
-                        Text("CANCEL", color = Color.White)
-                    }
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Button(
-                        onClick = { onApply(current, asc) },
-                        colors = ButtonDefaults.buttonColors(backgroundColor = Color(0xFFFFC107)),
-                        elevation = ButtonDefaults.elevation(defaultElevation = 6.dp)
-                    ) {
-                        Text("APPLY", color = Color.Black)
-                    }
-                }
-            }
-        }
-    }
-}
-
 enum class SortOption {
     NAME,
     PURCHASE_DATE,
@@ -392,10 +450,6 @@ enum class SortOption {
     REMAINING_QTY,
     CATEGORY
 }
-
-/* -------------------------
-   Reused UI pieces (GroupHeader, ProductCard, helpers)
-   ------------------------- */
 
 @Composable
 fun GroupHeader(title: String, count: Int) {

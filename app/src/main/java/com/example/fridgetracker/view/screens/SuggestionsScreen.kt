@@ -9,6 +9,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.runtime.*
@@ -23,6 +25,7 @@ import androidx.navigation.NavController
 import com.example.fridgetracker.model.ProductDraft
 import com.example.fridgetracker.model.Suggestion
 import com.example.fridgetracker.view_model.ProductViewModel
+import kotlinx.coroutines.launch
 
 @Composable
 fun SuggestionsScreen(
@@ -31,6 +34,9 @@ fun SuggestionsScreen(
     onMenuClick: () -> Unit
 ) {
     var searchQuery by remember { mutableStateOf("") }
+    val scaffoldState = rememberScaffoldState()
+    val coroutineScope = rememberCoroutineScope()
+    var searchOpen by remember { mutableStateOf(false) }
 
     val suggestions = remember {
         listOf(
@@ -53,36 +59,84 @@ fun SuggestionsScreen(
     }
 
     Scaffold(
+        scaffoldState = scaffoldState,
         topBar = {
+//            TopAppBar(
+//                backgroundColor = Color(0xFF6A1B9A),
+//                contentColor = Color.White,
+//                elevation = 4.dp
+//            ) {
+//                Row(
+//                    modifier = Modifier.fillMaxWidth(),
+//                    verticalAlignment = Alignment.CenterVertically
+//                ) {
+//                    IconButton(onClick = { coroutineScope.launch { scaffoldState.drawerState.open() } }) {
+//                        Icon(Icons.Default.Menu, contentDescription = "Menu", tint = Color.White)
+//                    }
+//                    Text(
+//                        "Suggestion",
+//                        style = MaterialTheme.typography.h6,
+//                        modifier = Modifier.weight(1f)
+//                    )
+//                    IconButton(onClick = { /* Search functionality */ }) {
+//                        Icon(Icons.Default.Search, contentDescription = "Search", tint = Color.White)
+//                    }
+//                }
+//            }
             TopAppBar(
-                backgroundColor = Color(0xFF6A1B9A),
-                contentColor = Color.White,
-                elevation = 4.dp
-            ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    IconButton(onClick = onMenuClick) {
-                        Icon(Icons.Default.Menu, contentDescription = "Menu", tint = Color.White)
-                    }
-                    Text(
-                        "Suggestion",
-                        style = MaterialTheme.typography.h6,
-                        modifier = Modifier.weight(1f)
-                    )
-                    IconButton(onClick = { /* Search functionality */ }) {
-                        Icon(Icons.Default.Search, contentDescription = "Search", tint = Color.White)
-                    }
-                    IconButton(onClick = { /* Filter functionality */ }) {
-                        Icon(
-                            imageVector = Icons.Default.Menu, // Koristimo kao placeholder za filter
-                            contentDescription = "Filter",
-                            tint = Color.White
+                title = {
+                    if (!searchOpen) {
+                        Text(
+                            "Suggestion",
+                            style = MaterialTheme.typography.h6
+                        )
+                    } else {
+                        TextField(
+                            value = searchQuery,
+                            onValueChange = { searchQuery = it },
+                            placeholder = { Text("Search by name") },
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = TextFieldDefaults.textFieldColors(
+                                backgroundColor = Color(0xFF6A1B9A),
+                                focusedIndicatorColor = Color.Transparent,
+                                unfocusedIndicatorColor = Color.Transparent,
+                                textColor = Color.White,
+                                placeholderColor = Color.White.copy(alpha = 0.7f)
+                            )
                         )
                     }
+                },
+                backgroundColor = Color(0xFF6A1B9A),
+                contentColor = Color.White,
+                navigationIcon = {
+                    IconButton(onClick = { coroutineScope.launch { scaffoldState.drawerState.open() } }) {
+                        Icon(Icons.Default.Menu, contentDescription = "Menu")
+                    }
+                },
+                actions = {
+                    if (!searchOpen) {
+                        IconButton(onClick = { searchOpen = true }) {
+                            Icon(Icons.Default.Search, contentDescription = "Search")
+                        }
+                    } else {
+                        IconButton(onClick = { searchOpen = false; searchQuery = "" }) {
+                            Icon(Icons.Default.Close, contentDescription = "Close search")
+                        }
+                    }
                 }
-            }
+            )
+        },
+        drawerContent = {
+            AppDrawer(
+                navController = navController,
+                currentRoute = "suggestions",
+                closeDrawer = {
+                    coroutineScope.launch {
+                        scaffoldState.drawerState.close()
+                    }
+                }
+            )
         },
         floatingActionButton = {
             FloatingActionButton(
@@ -98,37 +152,20 @@ fun SuggestionsScreen(
                 .padding(padding)
                 .fillMaxSize()
         ) {
-            // Header
-            Surface(
-                modifier = Modifier.fillMaxWidth(),
-                color = Color(0xFFFFA726),
-                elevation = 2.dp
-            ) {
-                Text(
-                    "Many presets",
-                    modifier = Modifier.padding(16.dp),
-                    style = MaterialTheme.typography.h5.copy(
-                        fontWeight = FontWeight.Bold,
-                        fontStyle = androidx.compose.ui.text.font.FontStyle.Italic
-                    ),
-                    color = Color.White
-                )
-            }
-
             // Search bar (optional)
-            OutlinedTextField(
-                value = searchQuery,
-                onValueChange = { searchQuery = it },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 8.dp),
-                placeholder = { Text("Search suggestions...") },
-                singleLine = true,
-                colors = TextFieldDefaults.outlinedTextFieldColors(
-                    focusedBorderColor = Color(0xFF6A1B9A),
-                    cursorColor = Color(0xFF6A1B9A)
-                )
-            )
+//            OutlinedTextField(
+//                value = searchQuery,
+//                onValueChange = { searchQuery = it },
+//                modifier = Modifier
+//                    .fillMaxWidth()
+//                    .padding(horizontal = 16.dp, vertical = 8.dp),
+//                placeholder = { Text("Search suggestions...") },
+//                singleLine = true,
+//                colors = TextFieldDefaults.outlinedTextFieldColors(
+//                    focusedBorderColor = Color(0xFF6A1B9A),
+//                    cursorColor = Color(0xFF6A1B9A)
+//                )
+//            )
 
             // Suggestions list
             LazyColumn(

@@ -36,10 +36,15 @@ fun AppNavHost(productViewModel: ProductViewModel) {
         }
         composable("suggestions") {
             val scope = rememberCoroutineScope()
+            val scaffoldState = rememberScaffoldState()
             SuggestionsScreen(
                 navController = navController,
                 vm = productViewModel,
-                onMenuClick = { /* Drawer se otvara iz HomeScreen */ }
+                onMenuClick = {
+                    scope.launch {
+                        scaffoldState.drawerState.open()
+                    }
+                }
             )
         }
         composable("category") {

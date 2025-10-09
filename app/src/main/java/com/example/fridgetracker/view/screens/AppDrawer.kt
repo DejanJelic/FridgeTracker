@@ -94,15 +94,15 @@ fun AppDrawer(
             }
         )
 
-        DrawerMenuItem(
-            icon = Icons.Default.DateRange,
-            title = "Consumption",
-            isSelected = currentRoute == "consumption",
-            onClick = {
-                // TODO: Navigate to consumption
-                closeDrawer()
-            }
-        )
+//        DrawerMenuItem(
+//            icon = Icons.Default.DateRange,
+//            title = "Consumption",
+//            isSelected = currentRoute == "consumption",
+//            onClick = {
+//                // TODO: Navigate to consumption
+//                closeDrawer()
+//            }
+//        )
 
         Divider(modifier = Modifier.padding(vertical = 8.dp))
 
@@ -139,16 +139,6 @@ fun AppDrawer(
         )
 
         DrawerMenuItem(
-            icon = Icons.Default.Star,
-            title = "Unit",
-            isSelected = false,
-            onClick = {
-                // TODO: Navigate to unit
-                closeDrawer()
-            }
-        )
-
-        DrawerMenuItem(
             icon = Icons.Default.List,
             title = "Suggestion",
             isSelected = currentRoute == "suggestions",
@@ -160,15 +150,15 @@ fun AppDrawer(
 
         Divider(modifier = Modifier.padding(vertical = 8.dp))
 
-        DrawerMenuItem(
-            icon = Icons.Default.Settings,
-            title = "Settings",
-            isSelected = false,
-            onClick = {
-                // TODO: Navigate to settings
-                closeDrawer()
-            }
-        )
+//        DrawerMenuItem(
+//            icon = Icons.Default.Settings,
+//            title = "Settings",
+//            isSelected = false,
+//            onClick = {
+//                // TODO: Navigate to settings
+//                closeDrawer()
+//            }
+//        )
 
         DrawerMenuItem(
             icon = Icons.Default.Info,

@@ -47,6 +47,7 @@ fun CategoryScreen(
 ) {
     val products by vm.products.collectAsState()
     val scaffoldState = rememberScaffoldState()
+    val coroutineScope = rememberCoroutineScope()
 
     // initial categories (you can change order or items)
     val initialCategories = listOf(
@@ -86,12 +87,23 @@ fun CategoryScreen(
                 elevation = 4.dp
             ) {
                 Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                    IconButton(onClick = onMenuClick) {
+                    IconButton(onClick = { coroutineScope.launch { scaffoldState.drawerState.open() } }) {
                         Icon(Icons.Default.Menu, contentDescription = "Menu", tint = Color.White)
                     }
                     Text("Categories", style = MaterialTheme.typography.h6, modifier = Modifier.weight(1f))
                 }
             }
+        },
+        drawerContent = {
+            AppDrawer(
+                navController = navController,
+                currentRoute = "category",
+                closeDrawer = {
+                    coroutineScope.launch {
+                        scaffoldState.drawerState.close()
+                    }
+                }
+            )
         },
         floatingActionButton = {
             FloatingActionButton(onClick = { /* TODO add category */ }, backgroundColor = Color(0xFFFFA726)) {

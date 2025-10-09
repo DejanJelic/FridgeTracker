@@ -45,6 +45,8 @@ fun LocationScreen(
     onMenuClick: () -> Unit
 ) {
     val products by vm.products.collectAsState()
+    val scaffoldState = rememberScaffoldState()
+    val coroutineScope = rememberCoroutineScope()
 
     // Predefined locations with colors (order matters)
     val defaultLocations = listOf(
@@ -67,6 +69,7 @@ fun LocationScreen(
     }
 
     Scaffold(
+        scaffoldState = scaffoldState,
         topBar = {
             TopAppBar(
                 backgroundColor = Color(0xFF6A1B9A),
@@ -77,12 +80,23 @@ fun LocationScreen(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    IconButton(onClick = onMenuClick) {
+                    IconButton(onClick = { coroutineScope.launch { scaffoldState.drawerState.open() } }) {
                         Icon(Icons.Default.Menu, contentDescription = "Menu", tint = Color.White)
                     }
                     Text("Locations", style = MaterialTheme.typography.h6, modifier = Modifier.weight(1f))
                 }
             }
+        },
+        drawerContent = {
+            AppDrawer(
+                navController = navController,
+                currentRoute = "location",
+                closeDrawer = {
+                    coroutineScope.launch {
+                        scaffoldState.drawerState.close()
+                    }
+                }
+            )
         },
         floatingActionButton = {
             FloatingActionButton(onClick = { /* add location */ }, backgroundColor = Color(0xFFFFA726)) {
