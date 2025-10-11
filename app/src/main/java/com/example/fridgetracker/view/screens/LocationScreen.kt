@@ -19,6 +19,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
@@ -97,11 +98,6 @@ fun LocationScreen(
                     }
                 }
             )
-        },
-        floatingActionButton = {
-            FloatingActionButton(onClick = { /* add location */ }, backgroundColor = Color(0xFFFFA726)) {
-                Icon(Icons.Default.Add, contentDescription = "Add", tint = Color.White)
-            }
         }
     ) { padding ->
         Box(modifier = Modifier.padding(padding).fillMaxSize()) {
@@ -342,7 +338,8 @@ fun LocationItemCard(
     alpha: Float = 1f
 ) {
     Card(
-        modifier = modifier.shadow(elevation),
+        modifier = modifier.fillMaxWidth()
+        .shadow(elevation, RoundedCornerShape(16.dp)),
         elevation = elevation,
         shape = RoundedCornerShape(8.dp),
         backgroundColor = if (isDragging) Color(0xFFF5F5F5) else Color.White

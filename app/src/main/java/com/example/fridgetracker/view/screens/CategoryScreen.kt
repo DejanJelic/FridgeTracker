@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -104,11 +105,6 @@ fun CategoryScreen(
                     }
                 }
             )
-        },
-        floatingActionButton = {
-            FloatingActionButton(onClick = { /* TODO add category */ }, backgroundColor = Color(0xFFFFA726)) {
-                Icon(Icons.Default.Add, contentDescription = "Add category", tint = Color.White)
-            }
         }
     ) { padding ->
         Box(modifier = Modifier.padding(padding).fillMaxSize()) {
@@ -323,7 +319,8 @@ fun CategoryItemCard(
     alpha: Float = 1f
 ) {
     Card(
-        modifier = modifier.shadow(elevation),
+        modifier = modifier.fillMaxWidth()
+        .shadow(elevation, RoundedCornerShape(16.dp)),
         elevation = elevation,
         shape = RoundedCornerShape(8.dp),
         backgroundColor = Color.White

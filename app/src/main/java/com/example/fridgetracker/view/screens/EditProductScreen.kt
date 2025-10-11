@@ -321,7 +321,7 @@ fun EditProductScreen(
                             Icon(Icons.Default.QrCodeScanner, contentDescription = "Scan barcode")
                         }
                     }
-                    FloatingActionButton(onClick = { showFabMenu = !showFabMenu }, backgroundColor = Color(0xFFFFA726)) {
+                    FloatingActionButton(onClick = { showFabMenu = !showFabMenu }, backgroundColor = Color(0xFFFFC107)) {
                         Icon(Icons.Default.Add, contentDescription = "Add / Scan / Photo")
                     }
                 }
@@ -498,8 +498,10 @@ fun EditProductScreen(
                         var categoryExpanded by remember { mutableStateOf(false) }
                         var locationExpanded by remember { mutableStateOf(false) }
 
-                        val categoryOptions = listOf("No category", "Dairy", "Meat", "Vegetables", "Fruits")
-                        val locationOptions = listOf("Not stored", "Fridge", "Freezer", "Pantry")
+                        val categoryOptions = listOf("No category", "Fruits", "Vegetables", "Legumes", "Meat","Fish",
+                            "Seafood","Bread and cereals","Dairy products","Desserts and sugary foods","Prepared foods and snack foods",
+                            "Spices and condiments","Drinks","Alcohol","Household and cleaning")
+                        val locationOptions = listOf("Not stored", "Fridge", "Freezer", "Pantry","Larder")
 
                         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
                             Column(modifier = Modifier.weight(1f)) {

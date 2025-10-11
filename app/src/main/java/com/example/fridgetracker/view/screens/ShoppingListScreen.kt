@@ -1,14 +1,12 @@
 package com.example.fridgetracker.view.screens
 
 import androidx.compose.animation.core.*
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.*
@@ -17,7 +15,6 @@ import androidx.compose.material.icons.filled.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
@@ -31,28 +28,23 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import com.example.fridgetracker.model.ShoppingListItemEntity
+import com.example.fridgetracker.view_model.ShoppingListViewModel
 import kotlinx.coroutines.launch
-import java.util.*
 import kotlin.math.roundToInt
-
-data class ShoppingItem(
-    val id: String = UUID.randomUUID().toString(),
-    val name: String,
-    val quantity: Int = 1,
-    val isChecked: Boolean = false
-)
 
 @Composable
 fun ShoppingListScreen(
     navController: NavController,
+    vm: ShoppingListViewModel,
     onMenuClick: () -> Unit
 ) {
     val scaffoldState = rememberScaffoldState()
     val coroutineScope = rememberCoroutineScope()
 
     // Primary data
-    val shoppingItems = remember { mutableStateListOf<ShoppingItem>() }
-    val shoppingLists = remember { mutableStateMapOf<String, List<ShoppingItem>>() }
+    val shoppingItems = remember { mutableStateListOf<ShoppingListItemEntity>() }
+    val savedLists by vm.listsState.collectAsState()
 
     // UI state
     var searchQuery by remember { mutableStateOf("") }
@@ -68,13 +60,13 @@ fun ShoppingListScreen(
 
     // Drag state
     var draggedIndex by remember { mutableStateOf<Int?>(null) }
-    var accumulatedDrag by remember { mutableStateOf(0f) }
+    var accumulatedDrag by remember { mutableFloatStateOf(0f) }
 
     val itemHeightDp = 85.dp
     val density = LocalDensity.current
     val itemHeightPx = with(density) { itemHeightDp.toPx() }
 
-    val displayList = remember { mutableStateListOf<ShoppingItem>() }
+    val displayList = remember { mutableStateListOf<ShoppingListItemEntity>() }
 
     LaunchedEffect(shoppingItems.size, shoppingItems.toList()) {
         if (draggedIndex == null) {
@@ -101,23 +93,17 @@ fun ShoppingListScreen(
 
     fun addItemNow(name: String) {
         if (name.isBlank()) return
-        val item = ShoppingItem(name = name.trim())
+        val tempId = -System.currentTimeMillis()
+        val item = ShoppingListItemEntity(
+            name = name.trim(),
+            id = tempId,
+            listId = 0L,
+            quantity = 1,
+            checked = false,
+            orderIndex = 0
+        )
         shoppingItems.add(0, item)
         displayList.add(0, item)
-    }
-
-    fun removeCheckedItems() {
-        val toRemove = shoppingItems.filter { it.isChecked }
-        if (toRemove.isNotEmpty()) {
-            shoppingItems.removeAll(toRemove)
-            displayList.removeAll(toRemove)
-            coroutineScope.launch {
-                scaffoldState.snackbarHostState.showSnackbar(
-                    "${toRemove.size} item(s) removed",
-                    duration = SnackbarDuration.Short
-                )
-            }
-        }
     }
 
     Scaffold(
@@ -138,7 +124,6 @@ fun ShoppingListScreen(
                     IconButton(onClick = { coroutineScope.launch { scaffoldState.drawerState.open() } }) {
                         Icon(Icons.Default.Menu, contentDescription = "Menu")
                     }
-
                     // List selector
                     Box(modifier = Modifier.weight(1f)) {
                         Row(
@@ -163,19 +148,19 @@ fun ShoppingListScreen(
                             expanded = dropdownExpanded,
                             onDismissRequest = { dropdownExpanded = false }
                         ) {
-                            if (shoppingLists.isEmpty()) {
+                            if (savedLists.isEmpty()) {
                                 DropdownMenuItem(onClick = { dropdownExpanded = false }) {
                                     Text("No saved lists", color = Color.Gray)
                                 }
                             } else {
-                                shoppingLists.keys.forEach { name ->
+                                savedLists.forEach { listWith  ->
                                     DropdownMenuItem(
                                         onClick = {
                                             shoppingItems.clear()
-                                            shoppingItems.addAll(shoppingLists[name] ?: emptyList())
+                                            shoppingItems.addAll(listWith.items)
                                             displayList.clear()
-                                            displayList.addAll(shoppingItems)
-                                            selectedListName = name
+                                            displayList.addAll(listWith.items)
+                                            selectedListName = listWith.list.name
                                             dropdownExpanded = false
                                         }
                                     ) {
@@ -183,8 +168,8 @@ fun ShoppingListScreen(
                                             modifier = Modifier.fillMaxWidth(),
                                             horizontalArrangement = Arrangement.SpaceBetween
                                         ) {
-                                            Text(name)
-                                            if (selectedListName == name) {
+                                            Text(listWith.list.name)
+                                            if (selectedListName == listWith.list.name) {
                                                 Icon(
                                                     Icons.Default.Check,
                                                     contentDescription = null,
@@ -209,20 +194,19 @@ fun ShoppingListScreen(
                             }
                         }
                     }
-
-                    // Save current list (check icon) - FIXED
                     IconButton(
                         onClick = {
-                            // If current list is already saved, update it
                             if (selectedListName != null) {
-                                shoppingLists[selectedListName!!] = shoppingItems.toList()
+                                savedLists.forEach { listWith ->
+                                    if(listWith.list.name == selectedListName!!)
+                                        listWith.items = shoppingItems.toList()
+                                }
                                 coroutineScope.launch {
                                     scaffoldState.snackbarHostState.showSnackbar(
                                         "List '${selectedListName}' updated"
                                     )
                                 }
                             } else {
-                                // Show save dialog for new list
                                 showSaveDialog = true
                                 saveNameText = ""
                             }
@@ -230,8 +214,6 @@ fun ShoppingListScreen(
                     ) {
                         Icon(Icons.Default.Check, contentDescription = "Save list")
                     }
-
-                    // REMOVED: MoreVert icon
                 }
             }
         },
@@ -258,12 +240,12 @@ fun ShoppingListScreen(
                         createNameText = ""
                     }
                 },
-                backgroundColor = Color(0xFFFFA726)
+                backgroundColor = Color(0xFFFFC107)
             ) {
                 Icon(
                     Icons.Default.Add,
                     contentDescription = "Add",
-                    tint = Color.White
+                    tint = Color.Black
                 )
             }
         }
@@ -441,7 +423,7 @@ fun ShoppingListScreen(
                             },
                         shape = RoundedCornerShape(16.dp),
                         elevation = elevation,
-                        backgroundColor = if (item.isChecked) Color(0xFFF5F5F5) else Color.White
+                        backgroundColor = if (item.checked) Color(0xFFF5F5F5) else Color.White
                     ) {
                         Row(
                             modifier = Modifier
@@ -451,12 +433,12 @@ fun ShoppingListScreen(
                         ) {
                             // Checkbox
                             Checkbox(
-                                checked = item.isChecked,
+                                checked = item.checked,
                                 onCheckedChange = { checked ->
                                     val pos = displayList.indexOfFirst { it.id == item.id }
-                                    if (pos >= 0) displayList[pos] = displayList[pos].copy(isChecked = checked)
+                                    if (pos >= 0) displayList[pos] = displayList[pos].copy(checked = checked)
                                     val idx = shoppingItems.indexOfFirst { it.id == item.id }
-                                    if (idx >= 0) shoppingItems[idx] = shoppingItems[idx].copy(isChecked = checked)
+                                    if (idx >= 0) shoppingItems[idx] = shoppingItems[idx].copy(checked = checked)
                                 },
                                 colors = CheckboxDefaults.colors(
                                     checkedColor = Color(0xFF6A1B9A),
@@ -472,8 +454,8 @@ fun ShoppingListScreen(
                                 modifier = Modifier.weight(1f),
                                 fontSize = 18.sp,
                                 fontWeight = FontWeight.Medium,
-                                textDecoration = if (item.isChecked) TextDecoration.LineThrough else null,
-                                color = if (item.isChecked) Color.Gray else Color.Black
+                                textDecoration = if (item.checked) TextDecoration.LineThrough else null,
+                                color = if (item.checked) Color.Gray else Color.Black
                             )
 
                             // Quantity controls
@@ -656,9 +638,22 @@ fun ShoppingListScreen(
             confirmButton = {
                 Button(
                     onClick = {
-                        val name = saveNameText.ifBlank { "List ${shoppingLists.size + 1}" }
-                        shoppingLists[name] = shoppingItems.toList()
+                        val name = saveNameText.ifBlank { "List ${savedLists.size + 1}" }
+                        savedLists.forEach { listWith ->
+                            if(listWith.list.name == name)
+                                listWith.items = shoppingItems.toList()
+                        }
                         selectedListName = name
+                        val itemsForDb = displayList.mapIndexed { idx, it ->
+                            it.copy(
+                                id = 0L,          // -> Room će auto-generisati
+                                listId = 0L,
+                                orderIndex = idx
+                            )
+                        }
+                        vm.saveList(name, itemsForDb.map { uiItem ->
+                            uiItem
+                        }, existingListId = null /* ili current saved id ako update */)
                         showSaveDialog = false
                         coroutineScope.launch {
                             scaffoldState.snackbarHostState.showSnackbar("Saved as '$name'")
@@ -727,11 +722,24 @@ fun ShoppingListScreen(
             confirmButton = {
                 Button(
                     onClick = {
-                        val name = createNameText.ifBlank { "New List ${shoppingLists.size + 1}" }
-                        shoppingLists[name] = emptyList()
+                        val name = createNameText.ifBlank { "New List ${savedLists.size + 1}" }
+                        savedLists.forEach { listWith ->
+                            if(listWith.list.name == name)
+                                listWith.items = emptyList()
+                        }
                         shoppingItems.clear()
                         displayList.clear()
                         selectedListName = name
+                        val itemsForDb = displayList.mapIndexed { idx, it ->
+                            it.copy(
+                                id = 0L,          // -> Room će auto-generisati
+                                listId = 0L,
+                                orderIndex = idx
+                            )
+                        }
+                        vm.saveList(name, itemsForDb.map { uiItem ->
+                            uiItem
+                        }, existingListId = null /* ili current saved id ako update */)
                         showCreateListDialog = false
                         coroutineScope.launch {
                             scaffoldState.snackbarHostState.showSnackbar("Created '$name'")

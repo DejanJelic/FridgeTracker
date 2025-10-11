@@ -7,11 +7,13 @@ import androidx.room.RoomDatabase
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 import com.example.fridgetracker.model.Product
+import com.example.fridgetracker.model.ShoppingListEntity
+import com.example.fridgetracker.model.ShoppingListItemEntity
 
-@Database(entities = [Product::class], version = 4, exportSchema = false)
+@Database(entities = [Product::class, ShoppingListEntity::class,ShoppingListItemEntity::class],  version = 5, exportSchema = false)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun productDao(): ProductDao
-
+    abstract fun shoppingListDao(): ShoppingListDao
     companion object {
         @Volatile private var INSTANCE: AppDatabase? = null
         val MIGRATION_1_3: Migration = object : Migration(1, 3) {
@@ -29,13 +31,37 @@ abstract class AppDatabase : RoomDatabase() {
                 database.execSQL("ALTER TABLE products ADD COLUMN afterOpeningDays INTEGER NOT NULL DEFAULT 2")
             }
         }
+        val MIGRATION_4_TO_5 = object : Migration(4, 5) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL("""
+            CREATE TABLE IF NOT EXISTS `shopping_lists` (
+               `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+               `name` TEXT NOT NULL,
+               `createdAtEpochMs` INTEGER NOT NULL
+            )
+        """.trimIndent())
+                database.execSQL("""
+            CREATE TABLE IF NOT EXISTS `shopping_list_items` (
+               `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+               `listId` INTEGER NOT NULL,
+               `name` TEXT NOT NULL,
+               `quantity` INTEGER NOT NULL,
+               `checked` INTEGER NOT NULL,
+               `orderIndex` INTEGER NOT NULL,
+               FOREIGN KEY(`listId`) REFERENCES `shopping_lists`(`id`) ON DELETE CASCADE
+            )
+        """.trimIndent())
+                database.execSQL("CREATE INDEX IF NOT EXISTS `index_shopping_list_items_listId` ON `shopping_list_items` (`listId`)")
+            }
+        }
+
         fun getInstance(context: Context): AppDatabase =
             INSTANCE ?: synchronized(this) {
                 val inst = Room.databaseBuilder(
                     context.applicationContext,
                     AppDatabase::class.java,
                     "fridge_db"
-                ).addMigrations(MIGRATION_1_3, MIGRATION_3_4)
+                ).addMigrations(MIGRATION_1_3, MIGRATION_3_4, MIGRATION_4_TO_5)
                     .build()
                 INSTANCE = inst
                 inst

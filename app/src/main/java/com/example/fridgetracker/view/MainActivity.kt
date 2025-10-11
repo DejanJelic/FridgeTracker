@@ -25,8 +25,11 @@ import androidx.core.app.ActivityCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.fridgetracker.data.AppDatabase
 import com.example.fridgetracker.repository.ProductRepository
+import com.example.fridgetracker.repository.ShoppingListRepository
 import com.example.fridgetracker.view_model.ProductViewModel
 import com.example.fridgetracker.view_model.ProductViewModelFactory
+import com.example.fridgetracker.view_model.ShoppingListViewModel
+import com.example.fridgetracker.view_model.ShoppingListViewModelFactory
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -34,10 +37,13 @@ class MainActivity : ComponentActivity() {
         val dao = AppDatabase.getInstance(application).productDao()
         val repo = ProductRepository(dao,application.applicationContext)
         val factory = ProductViewModelFactory(repo)
+        val shoppingDao = AppDatabase.getInstance(application).shoppingListDao()
+        val shoppingRepository = ShoppingListRepository(shoppingDao)
         setContent {
             RequestNotificationsWithMemory()
             val vm: ProductViewModel = viewModel(factory = factory)
-            AppNavHost(productViewModel = vm)
+            val shoppingViewModel: ShoppingListViewModel = viewModel(factory = ShoppingListViewModelFactory(shoppingRepository))
+            AppNavHost(productViewModel = vm, shoppingViewModel = shoppingViewModel)
         }
     }
 }

@@ -115,14 +115,6 @@ fun SuggestionsScreen(
                     }
                 }
             )
-        },
-        floatingActionButton = {
-            FloatingActionButton(
-                onClick = { navController.navigate("add") },
-                backgroundColor = Color(0xFFFFA726)
-            ) {
-                Icon(Icons.Default.Add, contentDescription = "Add", tint = Color.White)
-            }
         }
     ) { padding ->
         Column(
