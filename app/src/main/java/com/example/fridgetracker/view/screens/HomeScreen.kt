@@ -10,6 +10,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -75,18 +77,48 @@ fun HomeScreen(
     var appliedMinQty by remember { mutableStateOf<Double?>(null) }
     var appliedMaxQty by remember { mutableStateOf<Double?>(null) }
 
-    // Page loader state
-    var isLoading by remember { mutableStateOf(false) }
+    // Page loader (only initial)
+    var initialLoading by remember { mutableStateOf(true) }
+    LaunchedEffect(Unit) {
+        // show loader briefly on app start (adjust delay if needed)
+        delay(700)
+        initialLoading = false
+    }
+
+    // Panel-local state (reinitialized on open)
+    var currentSortLocal by remember { mutableStateOf(selectedSort) }
+    var ascLocal by remember { mutableStateOf(ascending) }
 
     // Helper status functions (product-level)
     fun Product.isExpired(): Boolean = daysUntil(this.bestBeforeEpochDay) <= 0L
     fun Product.isOpened(): Boolean = this.openedAtEpochDay != null
     fun Product.isReady(): Boolean = !isOpened() && !isExpired() && this.quantity > 0.0
 
+    // location colors - use same palette as your Location screen if present
+    val locationColors = mapOf(
+        "Fridge" to Color(0xFF42A5F5),
+        "Freezer" to Color(0xFFFF6026),
+        "Pantry" to Color(0xFFFFCA28),
+        "Larder" to Color(0xFFFFA726),
+        "Not stored" to Color(0xFF9E9E9E)
+    )
+    val defaultLocationColor = Color(0xFFFFC107)
+
     // Derived list of categories (from products) for filter dropdown, include "All" first
     val categories = remember(products) {
         val fromProducts = products.mapNotNull { it.category?.takeIf { c -> c.isNotBlank() } }.distinct().sorted()
         listOf("All") + fromProducts
+    }
+
+    // When panel opens, initialize panel-local controls from applied/selected state
+    LaunchedEffect(panelOpen) {
+        if (panelOpen) {
+            currentSortLocal = selectedSort
+            ascLocal = ascending
+            selectedCategoryUI = appliedCategory ?: "All"
+            minQtyText = appliedMinQty?.toString() ?: ""
+            maxQtyText = appliedMaxQty?.toString() ?: ""
+        }
     }
 
     // Search + applied filters: memoized
@@ -140,16 +172,6 @@ fun HomeScreen(
         )
     }
 
-    // Pager scroll -> show a small loader for nicety
-    LaunchedEffect(pagerState.isScrollInProgress) {
-        if (pagerState.isScrollInProgress) {
-            isLoading = true
-        } else {
-            delay(80)
-            isLoading = false
-        }
-    }
-
     Scaffold(
         scaffoldState = scaffoldState,
         topBar = {
@@ -162,7 +184,7 @@ fun HomeScreen(
                             TextField(
                                 value = query,
                                 onValueChange = { query = it },
-                                placeholder = { Text("Search by name") },
+                                placeholder = { Text("Search by name or barcode") },
                                 singleLine = true,
                                 modifier = Modifier.fillMaxWidth(),
                                 colors = TextFieldDefaults.textFieldColors(
@@ -205,12 +227,13 @@ fun HomeScreen(
                             selected = pagerState.currentPage == index,
                             onClick = { coroutineScope.launch { pagerState.animateScrollToPage(index) } }
                         ) {
-                            Box(modifier = Modifier.padding(vertical = 12.dp, horizontal = 8.dp)) {
+                            Box(modifier = Modifier.padding(vertical = 12.dp, horizontal = 12.dp)) {
                                 Text(
                                     text = title,
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis,
-                                    fontWeight = FontWeight.Bold
+                                    fontWeight = FontWeight.Bold,
+                                    modifier = Modifier.padding(end = 18.dp) // reserve space for badge
                                 )
                                 val count = counts.getOrElse(index) { 0 }
                                 if (count > 0) {
@@ -218,7 +241,7 @@ fun HomeScreen(
                                         count = count,
                                         modifier = Modifier
                                             .align(Alignment.TopEnd)
-                                            .offset(x = 12.dp, y = (-6).dp)
+                                            .offset(x = 6.dp, y = (-6).dp)
                                     )
                                 }
                             }
@@ -238,9 +261,12 @@ fun HomeScreen(
                 }
             )
         },
+        // HIDE FAB while panel is open to avoid overlap with APPLY
         floatingActionButton = {
-            FloatingActionButton(onClick = onAdd, backgroundColor = Color(0xFFFFC107)) {
-                Icon(Icons.Default.Add, contentDescription = "Add")
+            if (!panelOpen) {
+                FloatingActionButton(onClick = onAdd, backgroundColor = Color(0xFFFFC107)) {
+                    Icon(Icons.Default.Add, contentDescription = "Add")
+                }
             }
         }
     ) { padding ->
@@ -266,25 +292,26 @@ fun HomeScreen(
                         }
                     } else {
                         groupedSorted.forEach { (loc, list) ->
-                            item { GroupHeader(title = loc, count = list.size) }
+                            val color = locationColors.entries.firstOrNull { it.key.equals(loc, ignoreCase = true) }?.value ?: defaultLocationColor
+                            item { GroupHeaderColored(title = loc, count = list.size, color = color) }
                             items(list) { p -> ProductCard(product = p, onClick = { onOpen(p.id) }) }
                         }
                     }
                 }
             }
 
-            // Page loader overlay
-            if (isLoading) {
+            // Initial Page loader overlay (only on app start)
+            if (initialLoading) {
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .background(Color.White.copy(alpha = 0.6f)),
+                        .background(Color.White.copy(alpha = 0.8f)),
                     contentAlignment = Alignment.Center
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         CircularProgressIndicator()
                         Spacer(modifier = Modifier.height(8.dp))
-                        Text("Working...", color = Color.Black)
+                        Text("Loading...", color = Color.Black)
                     }
                 }
             }
@@ -296,7 +323,7 @@ fun HomeScreen(
                 exit = slideOutHorizontally(animationSpec = tween(durationMillis = 260), targetOffsetX = { fullWidth -> fullWidth }) + fadeOut(),
                 modifier = Modifier.align(Alignment.CenterEnd)
             ) {
-                // Panel card
+                // Panel card - with scrollable body and fixed bottom buttons
                 Card(
                     modifier = Modifier
                         .fillMaxHeight()
@@ -305,122 +332,143 @@ fun HomeScreen(
                     shape = RoundedCornerShape(8.dp),
                     elevation = 12.dp
                 ) {
-                    Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
-                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
+                    Column(modifier = Modifier.fillMaxSize()) {
+                        // Header
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(12.dp)
+                        ) {
                             Text("Filters & Sort", fontWeight = FontWeight.Bold)
                             IconButton(onClick = { panelOpen = false }) { Icon(Icons.Default.Close, contentDescription = "Close") }
                         }
-                        Spacer(modifier = Modifier.height(8.dp))
 
-                        // Category dropdown
-                        Text("Category", style = MaterialTheme.typography.caption)
-                        var expandedCat by remember { mutableStateOf(false) }
-                        Box {
-                            OutlinedButton(onClick = { expandedCat = true }, modifier = Modifier.fillMaxWidth()) {
-                                Text(selectedCategoryUI)
-                                Spacer(Modifier.weight(1f))
-                                Icon(Icons.Default.ArrowDropDown, contentDescription = null)
-                            }
-                            DropdownMenu(expanded = expandedCat, onDismissRequest = { expandedCat = false }) {
-                                categories.forEach { c ->
-                                    DropdownMenuItem(onClick = { selectedCategoryUI = c; expandedCat = false }) {
-                                        Text(c)
+                        // Scrollable content
+                        Column(modifier = Modifier
+                            .weight(1f)
+                            .verticalScroll(rememberScrollState())
+                            .padding(horizontal = 12.dp)
+                        ) {
+                            Spacer(modifier = Modifier.height(6.dp))
+
+                            // Category dropdown
+                            Text("Category", style = MaterialTheme.typography.caption)
+                            var expandedCat by remember { mutableStateOf(false) }
+                            Box {
+                                OutlinedButton(onClick = { expandedCat = true }, modifier = Modifier.fillMaxWidth()) {
+                                    Text(selectedCategoryUI)
+                                    Spacer(Modifier.weight(1f))
+                                    Icon(Icons.Default.ArrowDropDown, contentDescription = null)
+                                }
+                                DropdownMenu(expanded = expandedCat, onDismissRequest = { expandedCat = false }) {
+                                    categories.forEach { c ->
+                                        DropdownMenuItem(onClick = { selectedCategoryUI = c; expandedCat = false }) {
+                                            Text(c)
+                                        }
                                     }
                                 }
                             }
-                        }
 
-                        Spacer(modifier = Modifier.height(12.dp))
+                            Spacer(modifier = Modifier.height(10.dp))
 
-                        // Min/Max Quantity inputs
-                        Text("Remaining quantity (min / max)", style = MaterialTheme.typography.caption)
-                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            OutlinedTextField(
-                                value = minQtyText,
-                                onValueChange = { minQtyText = it.filter { ch -> ch.isDigit() || ch == '.' } },
-                                modifier = Modifier.weight(1f),
-                                placeholder = { Text("min") },
-                                singleLine = true,
-                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            // Min/Max Quantity inputs
+                            Text("Remaining quantity (min / max)", style = MaterialTheme.typography.caption)
+                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                OutlinedTextField(
+                                    value = minQtyText,
+                                    onValueChange = { minQtyText = it.filter { ch -> ch.isDigit() || ch == '.' } },
+                                    modifier = Modifier.weight(1f),
+                                    placeholder = { Text("min") },
+                                    singleLine = true,
+                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                )
+                                OutlinedTextField(
+                                    value = maxQtyText,
+                                    onValueChange = { maxQtyText = it.filter { ch -> ch.isDigit() || ch == '.' } },
+                                    modifier = Modifier.weight(1f),
+                                    placeholder = { Text("max") },
+                                    singleLine = true,
+                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                )
+                            }
+
+                            Spacer(modifier = Modifier.height(10.dp))
+
+                            // Sort options (compact)
+                            Text("Sort by", style = MaterialTheme.typography.caption)
+                            val options = listOf(
+                                Pair(SortOption.NAME, "Name"),
+                                Pair(SortOption.PURCHASE_DATE, "Purchase date"),
+                                Pair(SortOption.BEST_BEFORE, "Best before"),
+                                Pair(SortOption.REMAINING_QTY, "Remaining quantity"),
+                                Pair(SortOption.CATEGORY, "Category")
                             )
-                            OutlinedTextField(
-                                value = maxQtyText,
-                                onValueChange = { maxQtyText = it.filter { ch -> ch.isDigit() || ch == '.' } },
-                                modifier = Modifier.weight(1f),
-                                placeholder = { Text("max") },
-                                singleLine = true,
-                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                            )
-                        }
-
-                        Spacer(modifier = Modifier.height(12.dp))
-
-                        // Sort options
-                        Text("Sort by", style = MaterialTheme.typography.caption)
-                        val options = listOf(
-                            Pair(SortOption.NAME, "Name"),
-                            Pair(SortOption.PURCHASE_DATE, "Purchase date"),
-                            Pair(SortOption.BEST_BEFORE, "Best before"),
-                            Pair(SortOption.REMAINING_QTY, "Remaining quantity"),
-                            Pair(SortOption.CATEGORY, "Category")
-                        )
-                        var currentSortLocal by remember { mutableStateOf(selectedSort) }
-                        Column {
-                            options.forEach { (opt, label) ->
-                                Row(modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clickable { currentSortLocal = opt }
-                                    .padding(vertical = 8.dp),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    RadioButton(selected = currentSortLocal == opt, onClick = { currentSortLocal = opt })
-                                    Spacer(modifier = Modifier.width(8.dp))
-                                    Text(label)
+                            Column {
+                                options.forEach { (opt, label) ->
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .clickable { currentSortLocal = opt }
+                                            .padding(vertical = 6.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        RadioButton(selected = currentSortLocal == opt, onClick = { currentSortLocal = opt })
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Text(label)
+                                    }
                                 }
                             }
-                        }
 
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text("Ascending")
-                            Spacer(modifier = Modifier.width(12.dp))
-                            var ascLocal by remember { mutableStateOf(ascending) }
-                            Switch(checked = ascLocal, onCheckedChange = { ascLocal = it }, colors = SwitchDefaults.colors(checkedThumbColor = Color(0xFFFFC107)))
-                            Spacer(modifier = Modifier.weight(1f))
-                            // Reset button
-                            TextButton(onClick = {
-                                selectedCategoryUI = "All"
-                                minQtyText = ""
-                                maxQtyText = ""
-                                currentSortLocal = SortOption.BEST_BEFORE
-                                ascLocal = true
-                            }) {
-                                Text("RESET")
+                            Spacer(modifier = Modifier.height(8.dp))
+
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text("Ascending")
+                                Spacer(modifier = Modifier.width(12.dp))
+                                Switch(checked = ascLocal, onCheckedChange = { ascLocal = it }, colors = SwitchDefaults.colors(checkedThumbColor = Color(0xFFFFC107)))
+                                Spacer(modifier = Modifier.weight(1f))
+                                TextButton(onClick = {
+                                    // reset UI state
+                                    selectedCategoryUI = "All"
+                                    minQtyText = ""
+                                    maxQtyText = ""
+                                    currentSortLocal = SortOption.BEST_BEFORE
+                                    ascLocal = true
+                                }) {
+                                    Text("RESET")
+                                }
                             }
+
+                            Spacer(modifier = Modifier.height(8.dp))
                         }
 
-                        Spacer(modifier = Modifier.height(12.dp))
-
-                        // Apply button
-                        Button(onClick = {
-                            // parse numeric fields
-                            val min = minQtyText.toDoubleOrNull()
-                            val max = maxQtyText.toDoubleOrNull()
-                            // apply (update applied state)
-                            appliedCategory = if (selectedCategoryUI == "All") null else selectedCategoryUI
-                            appliedMinQty = min
-                            appliedMaxQty = max
-                            selectedSort = currentSortLocal
-//                            ascending = ascLocal
-                            // brief loader visual
-                            coroutineScope.launch {
-                                isLoading = true
-                                delay(250)
-                                isLoading = false
+                        // Bottom action row - fixed & always visible, with extra bottom padding so FAB (if shown) won't overlap
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(12.dp)
+                                .padding(bottom = 24.dp), // extra bottom space for safety (gestures / soft nav)
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            OutlinedButton(onClick = { panelOpen = false }, modifier = Modifier.weight(1f)) {
+                                Text("CANCEL")
+                            }
+                            Button(onClick = {
+                                // parse numeric fields
+                                val min = minQtyText.toDoubleOrNull()
+                                val max = maxQtyText.toDoubleOrNull()
+                                // apply (update applied state)
+                                appliedCategory = if (selectedCategoryUI == "All") null else selectedCategoryUI
+                                appliedMinQty = min
+                                appliedMaxQty = max
+                                selectedSort = currentSortLocal
+                                ascending = ascLocal
+                                // close panel
                                 panelOpen = false
+                            }, modifier = Modifier.weight(1f), colors = ButtonDefaults.buttonColors(backgroundColor = Color(0xFFFFC107))) {
+                                Text("APPLY", color = Color.Black)
                             }
-                        }, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(backgroundColor = Color(0xFFFFC107))) {
-                            Text("APPLY", color = Color.Black)
                         }
                     }
                 }
@@ -451,20 +499,76 @@ enum class SortOption {
     CATEGORY
 }
 
+/** Group header that accepts color and stretches full width aligned with cards */
+//@Composable
+//fun GroupHeaderColored(title: String, count: Int, color: Color) {
+//    Row(
+//        modifier = Modifier
+//            .fillMaxWidth()
+//            // iste horizontalne margine kao i ProductCard (12.dp)
+//            .padding(start = 12.dp, end = 12.dp, top = 8.dp, bottom = 8.dp),
+//        verticalAlignment = Alignment.CenterVertically
+//    ) {
+//        // left capsule (poravnata s unutrašnjim sadržajem kartice)
+//        Box(
+//            modifier = Modifier
+//                .clip(RoundedCornerShape(20.dp))
+//                .background(color)
+//                .padding(vertical = 8.dp, horizontal = 14.dp)
+//        ) {
+//            Text(text = title, fontWeight = FontWeight.Bold, color = Color.Black)
+//        }
+//
+//        Spacer(modifier = Modifier.weight(1f))
+//
+//        // desni broj, poravnat flush sa desnim marginama kartice
+//        Text(
+//            text = count.toString(),
+//            fontWeight = FontWeight.Bold,
+//            modifier = Modifier.padding(end = 4.dp)
+//        )
+//    }
+//}
 @Composable
-fun GroupHeader(title: String, count: Int) {
+fun GroupHeaderColored(title: String, count: Int, color: Color) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(8.dp)
-            .clip(RoundedCornerShape(12.dp))
-            .background(Color(0xFFFFC107)),
+            .padding(horizontal = 12.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(title, modifier = Modifier.weight(1f).padding(12.dp), fontWeight = FontWeight.Bold)
-        Text(count.toString(), modifier = Modifier.padding(end = 12.dp))
+        // Capsule sa background bojom
+        Surface(
+            shape = RoundedCornerShape(20.dp),
+            color = color,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text(
+                text = title,
+                fontWeight = FontWeight.Bold,
+                color = Color.White,
+                fontSize = 16.sp,
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+            )
+            Spacer(modifier = Modifier.weight(1f))
+
+            // Count
+            Text(
+                text = count.toString(),
+                fontWeight = FontWeight.Bold,
+                fontSize = 20.sp,
+                color = Color.Black,
+                textAlign = TextAlign.End,
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+            )
+        }
     }
 }
+
+/* -------------------------
+   Reused UI pieces (ProductCard + helpers)
+   If već imaš ovde ili u drugom fajlu, ostavi svoje.
+   ------------------------- */
 
 @Composable
 fun ProductCard(

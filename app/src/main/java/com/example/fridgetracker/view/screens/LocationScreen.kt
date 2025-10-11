@@ -52,7 +52,7 @@ fun LocationScreen(
     val defaultLocations = listOf(
         LocationItem("Larder", Color(0xFFFFA726)),
         LocationItem("Fridge", Color(0xFF42A5F5)),
-        LocationItem("Freezer", Color(0xFF29B6F6)),
+        LocationItem("Freezer", Color(0xFFFF6026)),
         LocationItem("Pantry", Color(0xFFFFCA28)),
         LocationItem("Not stored", Color(0xFF9E9E9E))
     )

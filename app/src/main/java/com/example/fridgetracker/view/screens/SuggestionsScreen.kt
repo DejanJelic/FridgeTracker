@@ -61,28 +61,6 @@ fun SuggestionsScreen(
     Scaffold(
         scaffoldState = scaffoldState,
         topBar = {
-//            TopAppBar(
-//                backgroundColor = Color(0xFF6A1B9A),
-//                contentColor = Color.White,
-//                elevation = 4.dp
-//            ) {
-//                Row(
-//                    modifier = Modifier.fillMaxWidth(),
-//                    verticalAlignment = Alignment.CenterVertically
-//                ) {
-//                    IconButton(onClick = { coroutineScope.launch { scaffoldState.drawerState.open() } }) {
-//                        Icon(Icons.Default.Menu, contentDescription = "Menu", tint = Color.White)
-//                    }
-//                    Text(
-//                        "Suggestion",
-//                        style = MaterialTheme.typography.h6,
-//                        modifier = Modifier.weight(1f)
-//                    )
-//                    IconButton(onClick = { /* Search functionality */ }) {
-//                        Icon(Icons.Default.Search, contentDescription = "Search", tint = Color.White)
-//                    }
-//                }
-//            }
             TopAppBar(
                 title = {
                     if (!searchOpen) {
@@ -152,21 +130,6 @@ fun SuggestionsScreen(
                 .padding(padding)
                 .fillMaxSize()
         ) {
-            // Search bar (optional)
-//            OutlinedTextField(
-//                value = searchQuery,
-//                onValueChange = { searchQuery = it },
-//                modifier = Modifier
-//                    .fillMaxWidth()
-//                    .padding(horizontal = 16.dp, vertical = 8.dp),
-//                placeholder = { Text("Search suggestions...") },
-//                singleLine = true,
-//                colors = TextFieldDefaults.outlinedTextFieldColors(
-//                    focusedBorderColor = Color(0xFF6A1B9A),
-//                    cursorColor = Color(0xFF6A1B9A)
-//                )
-//            )
-
             // Suggestions list
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),

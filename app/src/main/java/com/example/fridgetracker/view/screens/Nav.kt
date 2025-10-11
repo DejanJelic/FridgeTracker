@@ -74,5 +74,18 @@ fun AppNavHost(productViewModel: ProductViewModel) {
                 }
             )
         }
+        composable("shopping") {
+            val scope = rememberCoroutineScope()
+            val scaffoldState = rememberScaffoldState()
+
+            ShoppingListScreen(
+                navController = navController,
+                onMenuClick = {
+                    scope.launch {
+                        scaffoldState.drawerState.open()
+                    }
+                }
+            )
+        }
     }
 }

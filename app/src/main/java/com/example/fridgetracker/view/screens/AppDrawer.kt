@@ -77,7 +77,7 @@ fun AppDrawer(
             title = "Shopping list",
             isSelected = currentRoute == "shopping",
             onClick = {
-                // TODO: Navigate to shopping list
+                navController.navigate("shopping")
                 closeDrawer()
             }
         )
@@ -139,7 +139,7 @@ fun AppDrawer(
         )
 
         DrawerMenuItem(
-            icon = Icons.Default.List,
+            icon = Icons.Default.Lightbulb,
             title = "Suggestion",
             isSelected = currentRoute == "suggestions",
             onClick = {
