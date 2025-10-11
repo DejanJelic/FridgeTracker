@@ -8,6 +8,8 @@ import kotlinx.coroutines.flow.Flow
 interface ProductDao {
     @Query("SELECT * FROM products ORDER BY bestBeforeEpochDay ASC")
     fun observeAll(): Flow<List<Product>>
+    @Query("SELECT * FROM products")
+    suspend fun getAllSync():  List<Product>
 
     @Query("SELECT * FROM products WHERE id = :id LIMIT 1")
     fun observeById(id: Long): Flow<Product?>

@@ -184,7 +184,7 @@ fun HomeScreen(
                             TextField(
                                 value = query,
                                 onValueChange = { query = it },
-                                placeholder = { Text("Search by name or barcode") },
+                                placeholder = { Text("Search by name") },
                                 singleLine = true,
                                 modifier = Modifier.fillMaxWidth(),
                                 colors = TextFieldDefaults.textFieldColors(
@@ -286,9 +286,7 @@ fun HomeScreen(
                 LazyColumn(modifier = Modifier.fillMaxSize()) {
                     if (pageList.isEmpty()) {
                         item {
-                            Box(modifier = Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
-                                Text(text = "No products", style = MaterialTheme.typography.body1)
-                            }
+                            EmptyStateCard(page = page)
                         }
                     } else {
                         groupedSorted.forEach { (loc, list) ->
@@ -499,36 +497,119 @@ enum class SortOption {
     CATEGORY
 }
 
-/** Group header that accepts color and stretches full width aligned with cards */
-//@Composable
-//fun GroupHeaderColored(title: String, count: Int, color: Color) {
-//    Row(
-//        modifier = Modifier
-//            .fillMaxWidth()
-//            // iste horizontalne margine kao i ProductCard (12.dp)
-//            .padding(start = 12.dp, end = 12.dp, top = 8.dp, bottom = 8.dp),
-//        verticalAlignment = Alignment.CenterVertically
-//    ) {
-//        // left capsule (poravnata s unutrašnjim sadržajem kartice)
-//        Box(
-//            modifier = Modifier
-//                .clip(RoundedCornerShape(20.dp))
-//                .background(color)
-//                .padding(vertical = 8.dp, horizontal = 14.dp)
-//        ) {
-//            Text(text = title, fontWeight = FontWeight.Bold, color = Color.Black)
-//        }
-//
-//        Spacer(modifier = Modifier.weight(1f))
-//
-//        // desni broj, poravnat flush sa desnim marginama kartice
-//        Text(
-//            text = count.toString(),
-//            fontWeight = FontWeight.Bold,
-//            modifier = Modifier.padding(end = 4.dp)
-//        )
-//    }
-//}
+@Composable
+fun EmptyStateCard(
+    page: Int,
+    modifier: Modifier = Modifier
+) {
+    when (page) {
+        0 -> { // All tab
+            Box(
+                modifier = modifier
+                    .fillMaxWidth()
+                    .padding(32.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Icon(
+                        Icons.Default.Inventory,
+                        contentDescription = null,
+                        tint = Color.Gray,
+                        modifier = Modifier.size(64.dp)
+                    )
+                    Spacer(Modifier.height(16.dp))
+                    Text("No products yet", fontSize = 18.sp, color = Color.Gray)
+                    Spacer(Modifier.height(8.dp))
+                    Text("Add your first product", fontSize = 14.sp, color = Color.Gray)
+                }
+            }
+        }
+        1 -> { // Ready tab
+            Box(
+                modifier = modifier
+                    .fillMaxWidth()
+                    .padding(32.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Icon(
+                        Icons.Default.CheckCircle,
+                        contentDescription = null,
+                        tint = Color.Gray,
+                        modifier = Modifier.size(64.dp)
+                    )
+                    Spacer(Modifier.height(16.dp))
+                    Text("No ready products", fontSize = 18.sp, color = Color.Gray)
+                }
+            }
+        }
+        2 -> { // Opened tab
+            Box(
+                modifier = modifier
+                    .fillMaxWidth()
+                    .padding(32.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Icon(
+                        Icons.Default.NoEncryption,
+                        contentDescription = null,
+                        tint = Color.Gray,
+                        modifier = Modifier.size(64.dp)
+                    )
+                    Spacer(Modifier.height(16.dp))
+                    Text("No opened products", fontSize = 18.sp, color = Color.Gray)
+                }
+            }
+        }
+        3 -> { // Expired tab - SPECIAL CARD
+            Card(
+                modifier = modifier
+                    .fillMaxWidth()
+                    .padding(24.dp),
+                shape = RoundedCornerShape(20.dp),
+                border = BorderStroke(2.dp, Color(0xFF6A1B9A)),
+                backgroundColor = Color.White,
+                elevation = 2.dp
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(32.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(
+                        text = "No expired products",
+                        fontSize = 24.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.Black,
+                        textAlign = TextAlign.Center
+                    )
+
+                    Spacer(Modifier.height(24.dp))
+
+                    Text(
+                        text = "A product is \"Expired\" when best before date has passed.",
+                        fontSize = 16.sp,
+                        color = Color.DarkGray,
+                        textAlign = TextAlign.Center,
+                        lineHeight = 24.sp
+                    )
+
+                    Spacer(Modifier.height(16.dp))
+
+                    Text(
+                        text = "Click on it, you can consume or trash it.",
+                        fontSize = 16.sp,
+                        color = Color.DarkGray,
+                        textAlign = TextAlign.Center,
+                        lineHeight = 24.sp
+                    )
+                }
+            }
+        }
+    }
+}
 @Composable
 fun GroupHeaderColored(title: String, count: Int, color: Color) {
     Row(

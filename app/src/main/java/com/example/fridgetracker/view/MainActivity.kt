@@ -19,10 +19,16 @@ import androidx.compose.material.AlertDialog
 import androidx.compose.material.Button
 import androidx.compose.material.Text
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.ContextCompat
 import androidx.core.app.ActivityCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.work.Constraints
+import androidx.work.ExistingPeriodicWorkPolicy
+import androidx.work.NetworkType
+import androidx.work.PeriodicWorkRequestBuilder
+import androidx.work.WorkManager
 import com.example.fridgetracker.data.AppDatabase
 import com.example.fridgetracker.repository.ProductRepository
 import com.example.fridgetracker.repository.ShoppingListRepository
@@ -30,6 +36,8 @@ import com.example.fridgetracker.view_model.ProductViewModel
 import com.example.fridgetracker.view_model.ProductViewModelFactory
 import com.example.fridgetracker.view_model.ShoppingListViewModel
 import com.example.fridgetracker.view_model.ShoppingListViewModelFactory
+import com.example.fridgetracker.worker.ExpiryCheckWorker
+import java.util.concurrent.TimeUnit
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -39,6 +47,23 @@ class MainActivity : ComponentActivity() {
         val factory = ProductViewModelFactory(repo)
         val shoppingDao = AppDatabase.getInstance(application).shoppingListDao()
         val shoppingRepository = ShoppingListRepository(shoppingDao)
+        // Schedule periodic worker once (keep existing work if already scheduled)
+        val periodic = PeriodicWorkRequestBuilder<ExpiryCheckWorker>(1, TimeUnit.DAYS)
+            .setConstraints(
+                Constraints.Builder()
+                    .setRequiresBatteryNotLow(false)
+                    .setRequiresStorageNotLow(false)
+                    .setRequiredNetworkType(NetworkType.NOT_REQUIRED)
+                    .build()
+            )
+            .addTag("expiry_check_tag")
+            .build()
+
+        WorkManager.getInstance(this).enqueueUniquePeriodicWork(
+            "expiry_check_unique",
+            ExistingPeriodicWorkPolicy.KEEP,
+            periodic
+        )
         setContent {
             RequestNotificationsWithMemory()
             val vm: ProductViewModel = viewModel(factory = factory)
@@ -60,7 +85,7 @@ fun RequestNotificationsWithMemory() {
 
     // SharedPreferences to track if we have already searched
     val prefs = remember { context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE) }
-    var askedOnce by remember { mutableStateOf(prefs.getBoolean(KEY_NOTIF_REQUESTED, false)) }
+    var askedOnce by rememberSaveable { mutableStateOf(prefs.getBoolean(KEY_NOTIF_REQUESTED, false)) }
     val hasPermission = ContextCompat.checkSelfPermission(context, permission) == PackageManager.PERMISSION_GRANTED
     var showDialog by remember { mutableStateOf(false) }
 

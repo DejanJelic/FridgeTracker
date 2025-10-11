@@ -1,5 +1,7 @@
 package com.example.fridgetracker.view.screens
 
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -13,10 +15,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import androidx.core.net.toUri
 
 @Composable
 fun AppDrawer(
@@ -24,6 +27,7 @@ fun AppDrawer(
     currentRoute: String,
     closeDrawer: () -> Unit
 ) {
+    val context = LocalContext.current
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -50,7 +54,7 @@ fun AppDrawer(
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
-                        imageVector = Icons.Default.ShoppingCart,
+                        imageVector = Icons.Default.Storefront,
                         contentDescription = "App icon",
                         tint = Color.White,
                         modifier = Modifier.size(32.dp)
@@ -60,7 +64,7 @@ fun AppDrawer(
                 Spacer(modifier = Modifier.width(16.dp))
 
                 Text(
-                    text = "Best Before",
+                    text = "Fridge Tracker",
                     style = MaterialTheme.typography.h5.copy(
                         fontWeight = FontWeight.Bold,
                         color = Color(0xFF6A1B9A)
@@ -93,16 +97,6 @@ fun AppDrawer(
                 closeDrawer()
             }
         )
-
-//        DrawerMenuItem(
-//            icon = Icons.Default.DateRange,
-//            title = "Consumption",
-//            isSelected = currentRoute == "consumption",
-//            onClick = {
-//                // TODO: Navigate to consumption
-//                closeDrawer()
-//            }
-//        )
 
         Divider(modifier = Modifier.padding(vertical = 8.dp))
 
@@ -150,22 +144,17 @@ fun AppDrawer(
 
         Divider(modifier = Modifier.padding(vertical = 8.dp))
 
-//        DrawerMenuItem(
-//            icon = Icons.Default.Settings,
-//            title = "Settings",
-//            isSelected = false,
-//            onClick = {
-//                // TODO: Navigate to settings
-//                closeDrawer()
-//            }
-//        )
-
-        DrawerMenuItem(
+         DrawerMenuItem(
             icon = Icons.Default.Info,
             title = "Help",
             isSelected = false,
             onClick = {
-                // TODO: Navigate to help
+                // Open GitHub repository
+                val intent = Intent(
+                    Intent.ACTION_VIEW,
+                    "https://github.com/DejanJelic/FridgeTracker".toUri()
+                )
+                context.startActivity(intent)
                 closeDrawer()
             }
         )

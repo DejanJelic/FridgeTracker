@@ -4,7 +4,6 @@ import android.app.DatePickerDialog
 import android.graphics.Bitmap
 import android.net.Uri
 import android.util.Log
-import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.core.animateDpAsState
@@ -27,6 +26,7 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -36,14 +36,17 @@ import com.example.fridgetracker.model.Product
 import com.example.fridgetracker.view_model.ProductViewModel
 import java.time.LocalDate
 import androidx.core.net.toUri
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileOutputStream
 import java.io.OutputStream
+import androidx.compose.ui.window.Dialog
 
+enum class SnackbarType {
+    SUCCESS, ERROR, INFO, WARNING
+}
 @Composable
 fun EditProductScreen(
     navController: NavController,
@@ -56,7 +59,7 @@ fun EditProductScreen(
     val scaffoldState = rememberScaffoldState()
     val coroutineScope = rememberCoroutineScope()
 
-    // REACTIVE product observation (this fixes "consume not persisting" and live updates)
+    // REACTIVE product observation
     val existingProductState = if (productId != null) {
         vm.getProductFlow(productId).collectAsState(initial = null)
     } else {
@@ -64,7 +67,7 @@ fun EditProductScreen(
     }
     val existingProduct by existingProductState
 
-    // Loading / saving / deleting states for PageLoader
+    // Loading / saving / deleting states
     var isLoading by remember { mutableStateOf(productId != null && existingProduct == null) }
     var isSaving by remember { mutableStateOf(false) }
     var isDeleting by remember { mutableStateOf(false) }
@@ -72,18 +75,19 @@ fun EditProductScreen(
     // Prefill (Add mode)
     val prefill by vm.prefill.collectAsState()
 
-    // States
+    // Fields
     var name by remember { mutableStateOf("") }
     var barcode by remember { mutableStateOf("") }
     var quantity by remember { mutableStateOf(1.0) }               // Double
     var unit by remember { mutableStateOf("pcs") }
-    // put "pcs" (No unit) first
     val unitOptions = listOf("pcs","piece", "kg", "g", "L")
     var unitExpanded by remember { mutableStateOf(false) }
 
     var daysUntilExpiryStr by remember { mutableStateOf("30") }
     var purchaseDate by remember { mutableStateOf(LocalDate.now()) }
-    var isOpened by remember { mutableStateOf(false) }
+    // two separate booleans now:
+    var alreadyOpened by remember { mutableStateOf(false) }       // user checked "Already opened"
+    var openIndividually by remember { mutableStateOf(false) }    // user checked "Open individually"
     var category by remember { mutableStateOf("No category") }
     var location by remember { mutableStateOf("Not stored") }
     var comment by remember { mutableStateOf("") }
@@ -98,16 +102,19 @@ fun EditProductScreen(
     var showConsumeDialog by remember { mutableStateOf(false) }
     var showTrashDialog by remember { mutableStateOf(false) }
 
-    // Quantity UI helpers (inline numeric field similar to expiry)
+    // NEW: dialogs for info (only opened by info icon)
+    var showAlreadyOpenedDialog by remember { mutableStateOf(false) }
+    var showOpenIndividuallyDialog by remember { mutableStateOf(false) }
+
+    // Quantity UI
     var editingQuantity by remember { mutableStateOf(false) }
     var manualQuantityText by remember { mutableStateOf(quantity.toInt().toString()) }
 
-    // FAB menu (scan vs camera)
+    // FAB menu
     var showFabMenu by remember { mutableStateOf(false) }
     val fabSpacing by animateDpAsState(targetValue = if (showFabMenu) 72.dp else 0.dp)
 
-    // --- Image pickers ---
-    // 1) GetContent (gallery) -> copy to internal file (copyUriToInternalFile)
+    // Image pickers
     val imagePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
@@ -121,7 +128,6 @@ fun EditProductScreen(
         }
     }
 
-    // 2) Camera preview -> returns Bitmap, save to internal file
     val takePictureLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.TakePicturePreview()
     ) { bitmap ->
@@ -146,7 +152,10 @@ fun EditProductScreen(
             purchaseDate = LocalDate.ofEpochDay(product.addedAtEpochDay)
             val bestBefore = LocalDate.ofEpochDay(product.bestBeforeEpochDay)
             daysUntilExpiryStr = (bestBefore.toEpochDay() - purchaseDate.toEpochDay()).toString()
-            isOpened = product.openedAtEpochDay != null
+            // map existing values into our two booleans:
+            alreadyOpened = product.openedAtEpochDay != null
+            // heuristic: if notifyAfterOpening == false and not opened -> treat as openIndividually
+            openIndividually = (product.openedAtEpochDay == null) && (product.notifyAfterOpening == false)
             category = product.category ?: "No category"
             location = product.location ?: "Not stored"
             expiryDaysBefore = product.expiryDaysBefore.toString()
@@ -159,7 +168,7 @@ fun EditProductScreen(
             isLoading = false
         }
         if (productId != null && existingProduct == null) {
-            // if still null after attempt, keep loading flag short time
+            // short fallback
             isLoading = false
         }
     }
@@ -179,9 +188,65 @@ fun EditProductScreen(
         }
     }
 
-    // --- Scaffold + TopBar + TabRow etc. (kept similar) ---
     Scaffold(
         scaffoldState = scaffoldState,
+        snackbarHost = {
+            SnackbarHost(
+                hostState = it,
+                snackbar = { data ->
+                    // Parse type from message (hack, ali radi)
+                    val (type, actualMessage) = when {
+                        data.message.startsWith("✓") -> SnackbarType.SUCCESS to data.message.substring(2)
+                        data.message.startsWith("✗") -> SnackbarType.ERROR to data.message.substring(2)
+                        data.message.startsWith("⚠") -> SnackbarType.WARNING to data.message.substring(2)
+                        else -> SnackbarType.INFO to data.message
+                    }
+
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        shape = RoundedCornerShape(16.dp),
+                        backgroundColor = when (type) {
+                            SnackbarType.SUCCESS -> Color(0xFF4CAF50)
+                            SnackbarType.ERROR -> Color(0xFFEF5350)
+                            SnackbarType.INFO -> Color(0xFF2196F3)
+                            SnackbarType.WARNING -> Color(0xFFFFA726)
+                        },
+                        elevation = 8.dp
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                imageVector = when (type) {
+                                    SnackbarType.SUCCESS -> Icons.Default.CheckCircle
+                                    SnackbarType.ERROR -> Icons.Default.Error
+                                    SnackbarType.INFO -> Icons.Default.Info
+                                    SnackbarType.WARNING -> Icons.Default.Warning
+                                },
+                                contentDescription = null,
+                                tint = Color.White,
+                                modifier = Modifier.size(24.dp)
+                            )
+
+                            Spacer(Modifier.width(12.dp))
+
+                            Text(
+                                text = actualMessage,
+                                color = Color.White,
+                                modifier = Modifier.weight(1f),
+                                style = MaterialTheme.typography.body1,
+                                fontWeight = FontWeight.Medium
+                            )
+                        }
+                    }
+                }
+            )
+        },
         topBar = {
             TopAppBar(
                 title = { Text(if (isEditMode) "Edit product" else "Add product") },
@@ -197,7 +262,7 @@ fun EditProductScreen(
                 contentColor = Color.White,
                 actions = {
                     IconButton(onClick = {
-                        // VALIDATION + SAVE with loader (await using suspend vm method)
+                        // VALIDATION + SAVE
                         val daysNum = daysUntilExpiryStr.toLongOrNull()
                         val expiryDaysNum = expiryDaysBefore.toIntOrNull()
                         val afterOpeningNum = afterOpeningDays.toIntOrNull()
@@ -205,27 +270,27 @@ fun EditProductScreen(
 
                         when {
                             name.isBlank() -> {
-                                coroutineScope.launch { scaffoldState.snackbarHostState.showSnackbar("Please enter product name") }
+                                coroutineScope.launch { scaffoldState.snackbarHostState.showSnackbar("⚠ Please enter product name") }
                                 return@IconButton
                             }
                             quantity <= 0.0 -> {
-                                coroutineScope.launch { scaffoldState.snackbarHostState.showSnackbar("Quantity must be greater than 0") }
+                                coroutineScope.launch { scaffoldState.snackbarHostState.showSnackbar("⚠ Quantity must be greater than 0") }
                                 return@IconButton
                             }
                             daysNum == null -> {
-                                coroutineScope.launch { scaffoldState.snackbarHostState.showSnackbar("Invalid 'days until expiry' value") }
+                                coroutineScope.launch { scaffoldState.snackbarHostState.showSnackbar("⚠ Invalid 'days until expiry' value") }
                                 return@IconButton
                             }
                             expiryDaysNum == null -> {
-                                coroutineScope.launch { scaffoldState.snackbarHostState.showSnackbar("Invalid expiry reminder days") }
+                                coroutineScope.launch { scaffoldState.snackbarHostState.showSnackbar("⚠ Invalid expiry reminder days") }
                                 return@IconButton
                             }
                             afterOpeningNum == null -> {
-                                coroutineScope.launch { scaffoldState.snackbarHostState.showSnackbar("Invalid 'after opening' days") }
+                                coroutineScope.launch { scaffoldState.snackbarHostState.showSnackbar("⚠ Invalid 'after opening' days") }
                                 return@IconButton
                             }
                             price.isNotBlank() && priceNum == null -> {
-                                coroutineScope.launch { scaffoldState.snackbarHostState.showSnackbar("Invalid price") }
+                                coroutineScope.launch { scaffoldState.snackbarHostState.showSnackbar("⚠ Invalid price") }
                                 return@IconButton
                             }
                         }
@@ -238,6 +303,10 @@ fun EditProductScreen(
                             else -> null
                         }
 
+                        // Decide openedAtEpochDay and notifyAfterOpening based on options:
+                        val openedEpoch = if (alreadyOpened) LocalDate.now().toEpochDay() else null
+                        val notifyAfterOpenFinal = if (openIndividually) false else notifyAfterOpening
+
                         val product = Product(
                             id = if (isEditMode) existingProduct?.id ?: 0L else 0L,
                             name = name.ifBlank { "Unnamed" },
@@ -245,7 +314,7 @@ fun EditProductScreen(
                             unit = unit,
                             addedAtEpochDay = purchaseDate.toEpochDay(),
                             bestBeforeEpochDay = bestBeforeEpochDay,
-                            openedAtEpochDay = if (isOpened) LocalDate.now().toEpochDay() else null,
+                            openedAtEpochDay = openedEpoch,
                             location = location,
                             photoUri = photoUriString,
                             barcode = barcode.ifBlank { null },
@@ -254,20 +323,20 @@ fun EditProductScreen(
                             price = price.ifBlank { null },
                             notifyExpiry = notifyExpiry,
                             expiryDaysBefore = expiryDaysNum ?: 4,
-                            notifyAfterOpening = notifyAfterOpening,
+                            notifyAfterOpening = notifyAfterOpenFinal,
                             afterOpeningDays = afterOpeningNum ?: 2
                         )
 
                         coroutineScope.launch {
                             try {
                                 isSaving = true
-                                vm.upsert(product) // suspend -> repo.upsert completes before we continue
-                                Toast.makeText(context, "Saved", Toast.LENGTH_SHORT).show()
+                                vm.upsert(product)
+                                scaffoldState.snackbarHostState.showSnackbar("✓ Product saved successfully")
                                 if (!isEditMode) vm.setPrefill(null)
                                 navController.popBackStack()
                             } catch (t: Throwable) {
                                 Log.w("EditProduct", "save failed", t)
-                                scaffoldState.snackbarHostState.showSnackbar("Save failed: ${t.message ?: "error"}")
+                                scaffoldState.snackbarHostState.showSnackbar("✗ Save failed: ${t.message ?: "error"}")
                             } finally {
                                 isSaving = false
                             }
@@ -310,7 +379,6 @@ fun EditProductScreen(
             }
         },
         floatingActionButton = {
-            // FAB menu: main FAB toggles menu; show two mini FABs for camera and scan when expanded
             Box {
                 Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     if (showFabMenu) {
@@ -358,7 +426,6 @@ fun EditProductScreen(
                                 Spacer(modifier = Modifier.width(12.dp))
 
                                 Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                                    // image picker surface: clicking opens gallery; camera is from FAB
                                     Surface(modifier = Modifier.size(120.dp, 100.dp).clickable { imagePickerLauncher.launch("image/*") },
                                         shape = RoundedCornerShape(8.dp), color = Color(0xFFFDD835)) {
                                         Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
@@ -381,7 +448,7 @@ fun EditProductScreen(
 
                         Spacer(modifier = Modifier.height(16.dp))
 
-                        // Quantity: label fixed width so not clipped; inline numeric edit field styled as expiry
+                        // Quantity row
                         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
                             Text("Quantity", modifier = Modifier.width(70.dp), style = MaterialTheme.typography.body1, maxLines = 1)
                             IconButton(onClick = { if (quantity > 1.0) quantity -= 1.0 }, modifier = Modifier.size(40.dp)) { Text("-", style = MaterialTheme.typography.h5) }
@@ -403,13 +470,6 @@ fun EditProductScreen(
                                         }
                                     }
                                 )
-//                                OutlinedTextField(
-//                                    value = manualQuantityText,
-//                                    onValueChange = { manualQuantityText = it.filter { c -> c.isDigit() } },
-//                                    modifier = Modifier.width(100.dp),
-//                                    singleLine = true,
-//                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
-//                                )
                             } else {
                                 Surface(modifier = Modifier.width(80.dp), shape = RoundedCornerShape(8.dp), border = BorderStroke(1.dp, MaterialTheme.colors.onSurface.copy(alpha = 0.12f))) {
                                     Text(text = quantity.toInt().toString(), modifier = Modifier
@@ -425,7 +485,7 @@ fun EditProductScreen(
 
                             Spacer(modifier = Modifier.width(8.dp))
 
-                            // Unit dropdown: "No unit" (pcs) first
+                            // Unit dropdown
                             Box {
                                 OutlinedButton(onClick = { unitExpanded = true }, shape = RoundedCornerShape(8.dp)) {
                                     Text(if (unit == "pcs") "No unit" else unit)
@@ -447,16 +507,22 @@ fun EditProductScreen(
                         Spacer(modifier = Modifier.height(12.dp))
 
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Checkbox(checked = isOpened, onCheckedChange = { isOpened = it })
-                            Text("Open individually")
-                            IconButton(onClick = { Toast.makeText(context, "Track each item separately", Toast.LENGTH_SHORT).show() }) {
+                            Checkbox(checked = alreadyOpened, onCheckedChange = { checked ->
+                                alreadyOpened = checked
+                                if (checked) {
+                                    // conflict resolution: can't be both alreadyOpened and openIndividually
+                                    openIndividually = false
+                                }
+                            })
+                            Text("Already opened")
+                            IconButton(onClick = { showAlreadyOpenedDialog = true }) {
                                 Icon(Icons.Default.Info, contentDescription = "Info", modifier = Modifier.size(20.dp), tint = MaterialTheme.colors.onSurface.copy(alpha = 0.6f))
                             }
                         }
                     }
                 }
 
-                // DATE card (same)
+                // DATE card
                 Card(modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp), shape = RoundedCornerShape(12.dp), elevation = 2.dp) {
                     Column(modifier = Modifier.padding(12.dp)) {
                         Text("Date", style = MaterialTheme.typography.h6)
@@ -489,7 +555,7 @@ fun EditProductScreen(
                     }
                 }
 
-                // Classification (kept same)
+                // Classification card (same)
                 Card(modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp), shape = RoundedCornerShape(12.dp), elevation = 2.dp) {
                     Column(modifier = Modifier.padding(12.dp)) {
                         Text("Classification", style = MaterialTheme.typography.h6)
@@ -541,16 +607,29 @@ fun EditProductScreen(
                     }
                 }
 
-                // MISC
+                // MISC - now includes Open individually checkbox with its info
                 Card(modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp), shape = RoundedCornerShape(12.dp), elevation = 2.dp) {
                     Column(modifier = Modifier.padding(12.dp)) {
                         Text("Misc.", style = MaterialTheme.typography.h6)
                         Spacer(modifier = Modifier.height(6.dp))
 
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Checkbox(checked = isOpened, onCheckedChange = { isOpened = it })
-                            Text("Already opened")
-                            IconButton(onClick = { Toast.makeText(context, "Info about already opened", Toast.LENGTH_SHORT).show() }) {
+                        // Open individually row: toggle checkbox directly; info opens dialog
+                        Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                            Checkbox(
+                                checked = openIndividually,
+                                onCheckedChange = { checked ->
+                                    openIndividually = checked
+                                    if (checked) {
+                                        // conflict resolution
+                                        alreadyOpened = false
+                                        // disable notifications after opening
+                                        notifyAfterOpening = false
+                                    }
+                                },
+                                colors = CheckboxDefaults.colors(checkedColor = Color(0xFF6A1B9A))
+                            )
+                            Text("Open individually")
+                            IconButton(onClick = { showOpenIndividuallyDialog = true }) {
                                 Icon(Icons.Default.Info, contentDescription = "Info", modifier = Modifier.size(20.dp), tint = MaterialTheme.colors.onSurface.copy(alpha = 0.6f))
                             }
                         }
@@ -569,13 +648,12 @@ fun EditProductScreen(
                     }
                 }
 
-                // NOTIFICATIONS - aligned left/right
+                // NOTIFICATIONS card (keeps notifyAfterOpening but if openIndividually is true it's effectively ignored)
                 Card(modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp), shape = RoundedCornerShape(12.dp), elevation = 2.dp) {
                     Column(modifier = Modifier.padding(12.dp)) {
                         Text("Notifications", style = MaterialTheme.typography.h6)
                         Spacer(modifier = Modifier.height(6.dp))
 
-                        // expiry row: left label, right field
                         Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                             Row(modifier = Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically) {
                                 Checkbox(checked = notifyExpiry, onCheckedChange = { notifyExpiry = it })
@@ -591,18 +669,23 @@ fun EditProductScreen(
 
                         Spacer(modifier = Modifier.height(8.dp))
 
-                        // after opening row: left label, right field
                         Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                             Row(modifier = Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically) {
-                                Checkbox(checked = notifyAfterOpening, onCheckedChange = { notifyAfterOpening = it })
+                                // reflect openIndividually: if that is true, disable this checkbox and show info
+                                val enabled = !openIndividually
+                                Checkbox(checked = notifyAfterOpening, onCheckedChange = { if (enabled) notifyAfterOpening = it }, enabled = enabled)
                                 Text("After opening")
                             }
                             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.End) {
                                 OutlinedTextField(value = afterOpeningDays, onValueChange = { afterOpeningDays = it.filter { c -> c.isDigit() } },
-                                    modifier = Modifier.width(100.dp), singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number))
+                                    modifier = Modifier.width(100.dp), singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), enabled = !openIndividually)
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Text("days", modifier = Modifier.align(Alignment.CenterVertically).padding(end = 42.dp))
                             }
+                        }
+                        if (openIndividually) {
+                            Spacer(modifier = Modifier.height(6.dp))
+                            Text("Note: 'Open individually' disables notifications after opening and the product will not appear in the Opened tab.", style = MaterialTheme.typography.caption)
                         }
                     }
                 }
@@ -610,7 +693,7 @@ fun EditProductScreen(
                 Spacer(modifier = Modifier.height(80.dp))
             }
 
-            // PageLoader overlay: show progress while loading/saving/deleting
+            // PageLoader overlay
             if (isLoading || isSaving || isDeleting) {
                 Box(modifier = Modifier.fillMaxSize().alpha(0.85f).background(Color.White), contentAlignment = Alignment.Center) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -628,7 +711,7 @@ fun EditProductScreen(
         }
     }
 
-//     Consume Dialog: now uses vm.upsertSuspend to persist change and UI updates via collectAsState
+    // Consume / Trash dialogs (unchanged)...
     if (showConsumeDialog && existingProduct != null) {
         ConsumeDialog(product = existingProduct!!, onDismiss = { showConsumeDialog = false }, onConfirm = { consumedQuantity: Double ->
             coroutineScope.launch {
@@ -636,18 +719,16 @@ fun EditProductScreen(
                     isSaving = true
                     val remaining = existingProduct!!.quantity - consumedQuantity
                     if (remaining <= 0.0) {
-                        // delete product
                         vm.delete(existingProduct!!)
-                        Toast.makeText(context, "Product consumed completely", Toast.LENGTH_SHORT).show()
+                        scaffoldState.snackbarHostState.showSnackbar("✓ Product consumed completely")
                         navController.popBackStack()
                     } else {
                         val updated = existingProduct!!.copy(quantity = remaining)
                         vm.upsert(updated)
-                        Toast.makeText(context, "Consumed ${consumedQuantity.toInt()}", Toast.LENGTH_SHORT).show()
-                        // UI will auto-update because existingProduct is a collected flow
+                        scaffoldState.snackbarHostState.showSnackbar("✓ Consumed ${consumedQuantity.toInt()} items")
                     }
                 } catch (t: Throwable) {
-                    scaffoldState.snackbarHostState.showSnackbar("Error: ${t.message ?: "unknown"}")
+                    scaffoldState.snackbarHostState.showSnackbar("✗ Error: ${t.message ?: "unknown"}")
                 } finally {
                     isSaving = false
                     showConsumeDialog = false
@@ -655,17 +736,17 @@ fun EditProductScreen(
             }
         })
     }
-    // Trash Dialog
+
     if (showTrashDialog && existingProduct != null) {
         TrashDialog(product = existingProduct!!, onDismiss = { showTrashDialog = false }, onConfirm = {
             coroutineScope.launch {
                 try {
                     isDeleting = true
                     vm.delete(existingProduct!!)
-                    Toast.makeText(context, "Product deleted", Toast.LENGTH_SHORT).show()
+                    scaffoldState.snackbarHostState.showSnackbar("✓ Product deleted")
                     navController.popBackStack()
                 } catch (t: Throwable) {
-                    scaffoldState.snackbarHostState.showSnackbar("Delete failed: ${t.message ?: "error"}")
+                    scaffoldState.snackbarHostState.showSnackbar("✗ Delete failed: ${t.message ?: "error"}")
                 } finally {
                     isDeleting = false
                 }
@@ -673,16 +754,84 @@ fun EditProductScreen(
         })
     }
 
+    // Already opened info dialog (opened only by info button)
+    if (showAlreadyOpenedDialog) {
+        Dialog(onDismissRequest = { showAlreadyOpenedDialog = false }) {
+            Card(shape = RoundedCornerShape(24.dp), elevation = 8.dp, modifier = Modifier.fillMaxWidth(0.92f)) {
+                Column(modifier = Modifier.padding(20.dp)) {
+                    Text("Already opened", style = MaterialTheme.typography.h5)
+                    Spacer(Modifier.height(12.dp))
+                    Text(
+                        "Use this option to add a product that is already opened.\n\n" +
+                                "For example, when you enter your current inventory in the app. For new products purchased this option is not useful.\n\n" +
+                                "This option is available only when adding a product.",
+                        style = MaterialTheme.typography.body1
+                    )
+                    Spacer(Modifier.height(20.dp))
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                        TextButton(onClick = { showAlreadyOpenedDialog = false }) {
+                            Text("CANCEL", color = Color.Gray)
+                        }
+                        Spacer(Modifier.width(8.dp))
+                        TextButton(onClick = {
+                            // if user confirms here, we set alreadyOpened = true
+                            alreadyOpened = true
+                            openIndividually = false
+                            showAlreadyOpenedDialog = false
+                        }) {
+                            Text("OK", color = Color(0xFF6A1B9A))
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // Open individually info dialog
+    if (showOpenIndividuallyDialog) {
+        Dialog(onDismissRequest = { showOpenIndividuallyDialog = false }) {
+            Card(shape = RoundedCornerShape(24.dp), elevation = 8.dp, modifier = Modifier.fillMaxWidth(0.92f)) {
+                Column(modifier = Modifier.padding(20.dp)) {
+                    Text("Open individually", style = MaterialTheme.typography.h5)
+                    Spacer(Modifier.height(12.dp))
+                    Text(
+                        "Use this option for foods that you can eat one by one without affecting the consumption time.\n\n" +
+                                "For example, apples, bananas, eggs.\n\n" +
+                                "Don't apply for fresh products to be consumed quickly after opening, such as a tray of steaks, a bottle of milk, mayonnaise.\n\n" +
+                                "With this option the opened product will not be displayed in the Opened tab. Notifications after opening the product will not be available.",
+                        style = MaterialTheme.typography.body1
+                    )
+                    Spacer(Modifier.height(20.dp))
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                        TextButton(onClick = { showOpenIndividuallyDialog = false }) {
+                            Text("CANCEL", color = Color.Gray)
+                        }
+                        Spacer(Modifier.width(8.dp))
+                        TextButton(onClick = {
+                            // if user confirms here, toggle the flag to true
+                            openIndividually = true
+                            alreadyOpened = false
+                            notifyAfterOpening = false
+                            showOpenIndividuallyDialog = false
+                        }) {
+                            Text("OK", color = Color(0xFF6A1B9A))
+                        }
+                    }
+                }
+            }
+        }
+    }
 }
 
-// --- Helpers ---
+// ConsumeDialog and TrashDialog
+
 @Composable
 fun ConsumeDialog(
     product: Product,
     onDismiss: () -> Unit,
     onConfirm: (Double) -> Unit
 ) {
-    var consumeQuantity by remember { mutableDoubleStateOf(1.0) } // Double
+    var consumeQuantity by remember { mutableStateOf(1.0) } // Double
     val maxQuantity = product.quantity
 
     AlertDialog(
@@ -715,7 +864,6 @@ fun ConsumeDialog(
 
                 Spacer(modifier = Modifier.height(8.dp))
 
-                // Slider: eksplicitno napišemo tip parametra u lambda
                 Slider(
                     value = consumeQuantity.toFloat(),
                     onValueChange = { v: Float -> consumeQuantity = v.toDouble() },
@@ -761,6 +909,66 @@ fun TrashDialog(
     )
 }
 
+//@Composable
+//fun CustomSnackbar(
+//    message: String,
+//    type: SnackbarType,
+//    onDismiss: () -> Unit
+//) {
+//    val backgroundColor = when (type) {
+//        SnackbarType.SUCCESS -> Color(0xFF4CAF50)
+//        SnackbarType.ERROR -> Color(0xFFEF5350)
+//        SnackbarType.INFO -> Color(0xFF2196F3)
+//        SnackbarType.WARNING -> Color(0xFFFFA726)
+//    }
+//
+//    val icon = when (type) {
+//        SnackbarType.SUCCESS -> Icons.Default.CheckCircle
+//        SnackbarType.ERROR -> Icons.Default.Error
+//        SnackbarType.INFO -> Icons.Default.Info
+//        SnackbarType.WARNING -> Icons.Default.Warning
+//    }
+//
+//    Card(
+//        modifier = Modifier
+//            .fillMaxWidth()
+//            .padding(16.dp),
+//        shape = RoundedCornerShape(12.dp),
+//        backgroundColor = backgroundColor,
+//        elevation = 8.dp
+//    ) {
+//        Row(
+//            modifier = Modifier
+//                .fillMaxWidth()
+//                .padding(16.dp),
+//            verticalAlignment = Alignment.CenterVertically
+//        ) {
+//            Icon(
+//                imageVector = icon,
+//                contentDescription = null,
+//                tint = Color.White,
+//                modifier = Modifier.size(24.dp)
+//            )
+//
+//            Spacer(Modifier.width(12.dp))
+//
+//            Text(
+//                text = message,
+//                color = Color.White,
+//                modifier = Modifier.weight(1f),
+//                style = MaterialTheme.typography.body1
+//            )
+//
+//            IconButton(onClick = onDismiss) {
+//                Icon(
+//                    Icons.Default.Close,
+//                    contentDescription = "Dismiss",
+//                    tint = Color.White
+//                )
+//            }
+//        }
+//    }
+//}
 private fun showDatePicker(context: android.content.Context, initial: LocalDate = LocalDate.now(), onDateSelected: (LocalDate) -> Unit) {
     val year = initial.year
     val month = initial.monthValue - 1
