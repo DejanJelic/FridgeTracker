@@ -9,10 +9,11 @@ import androidx.navigation.compose.rememberNavController
 import com.example.fridgetracker.view.barcode.ScanScreen
 import com.example.fridgetracker.view_model.ProductViewModel
 import com.example.fridgetracker.view_model.ShoppingListViewModel
+import com.example.fridgetracker.view_model.UserProfileViewModel
 import kotlinx.coroutines.launch
 
 @Composable
-fun AppNavHost(productViewModel: ProductViewModel,shoppingViewModel: ShoppingListViewModel) {
+fun AppNavHost(productViewModel: ProductViewModel,shoppingViewModel: ShoppingListViewModel,userProfileViewModel : UserProfileViewModel) {
     val navController = rememberNavController()
     NavHost(navController = navController, startDestination = "home") {
         composable("home") { HomeScreen(navController,onAdd = { navController.navigate("add") }, onOpen = { id -> navController.navigate("edit/$id") },
@@ -82,6 +83,19 @@ fun AppNavHost(productViewModel: ProductViewModel,shoppingViewModel: ShoppingLis
             ShoppingListScreen(
                 navController = navController,
                 vm = shoppingViewModel,
+                onMenuClick = {
+                    scope.launch {
+                        scaffoldState.drawerState.open()
+                    }
+                }
+            )
+        }
+        composable("account") {
+            val scope = rememberCoroutineScope()
+            val scaffoldState = rememberScaffoldState()
+            AccountScreen(
+                navController = navController,
+                vm = userProfileViewModel,
                 onMenuClick = {
                     scope.launch {
                         scaffoldState.drawerState.open()

@@ -9,11 +9,13 @@ import androidx.sqlite.db.SupportSQLiteDatabase
 import com.example.fridgetracker.model.Product
 import com.example.fridgetracker.model.ShoppingListEntity
 import com.example.fridgetracker.model.ShoppingListItemEntity
+import com.example.fridgetracker.model.UserProfile
 
-@Database(entities = [Product::class, ShoppingListEntity::class,ShoppingListItemEntity::class],  version = 5, exportSchema = false)
+@Database(entities = [Product::class, ShoppingListEntity::class,ShoppingListItemEntity::class, UserProfile::class ],  version = 6, exportSchema = false)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun productDao(): ProductDao
     abstract fun shoppingListDao(): ShoppingListDao
+    abstract fun userProfileDao(): UserProfileDao
     companion object {
         @Volatile private var INSTANCE: AppDatabase? = null
         val MIGRATION_1_3: Migration = object : Migration(1, 3) {
@@ -54,6 +56,30 @@ abstract class AppDatabase : RoomDatabase() {
                 database.execSQL("CREATE INDEX IF NOT EXISTS `index_shopping_list_items_listId` ON `shopping_list_items` (`listId`)")
             }
         }
+        val MIGRATION_5_TO_6 = object : Migration(5, 6) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL("""
+                    CREATE TABLE IF NOT EXISTS `user_profile` (
+                        `id` INTEGER PRIMARY KEY NOT NULL,
+                        `firstName` TEXT NOT NULL,
+                        `lastName` TEXT NOT NULL,
+                        `dateOfBirth` TEXT NOT NULL,
+                        `weight` REAL,
+                        `gender` TEXT NOT NULL,
+                        `isVegan` INTEGER NOT NULL,
+                        `isVegetarian` INTEGER NOT NULL,
+                        `isPorkFree` INTEGER NOT NULL,
+                        `isMeatFree` INTEGER NOT NULL,
+                        `isNoBeef` INTEGER NOT NULL,
+                        `isGlutenFree` INTEGER NOT NULL,
+                        `isNoLactose` INTEGER NOT NULL,
+                        `isNoAlcohol` INTEGER NOT NULL,
+                        `isNoShellfish` INTEGER NOT NULL,
+                        `isNoNuts` INTEGER NOT NULL
+                    )
+                """.trimIndent())
+            }
+        }
 
         fun getInstance(context: Context): AppDatabase =
             INSTANCE ?: synchronized(this) {
@@ -61,7 +87,7 @@ abstract class AppDatabase : RoomDatabase() {
                     context.applicationContext,
                     AppDatabase::class.java,
                     "fridge_db"
-                ).addMigrations(MIGRATION_1_3, MIGRATION_3_4, MIGRATION_4_TO_5)
+                ).addMigrations(MIGRATION_1_3, MIGRATION_3_4, MIGRATION_4_TO_5,MIGRATION_5_TO_6)
                     .build()
                 INSTANCE = inst
                 inst

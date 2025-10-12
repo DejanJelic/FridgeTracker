@@ -13,6 +13,7 @@ import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
@@ -28,10 +29,13 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import com.example.fridgetracker.model.ShoppingListEntity
 import com.example.fridgetracker.model.ShoppingListItemEntity
 import com.example.fridgetracker.view_model.ShoppingListViewModel
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
+import com.example.fridgetracker.utilities.CustomSnackbar
+import com.example.fridgetracker.utilities.SnackbarType
 
 @Composable
 fun ShoppingListScreen(
@@ -57,6 +61,9 @@ fun ShoppingListScreen(
     var saveNameText by remember { mutableStateOf("") }
     var showCreateListDialog by remember { mutableStateOf(false) }
     var createNameText by remember { mutableStateOf("") }
+    var showDeleteDialog by remember { mutableStateOf(false) }
+    var listToDeleteId by remember { mutableStateOf<Long?>(null) }
+    var listToDeleteName by remember { mutableStateOf<String?>(null) }
 
     // Drag state
     var draggedIndex by remember { mutableStateOf<Int?>(null) }
@@ -67,6 +74,9 @@ fun ShoppingListScreen(
     val itemHeightPx = with(density) { itemHeightDp.toPx() }
 
     val displayList = remember { mutableStateListOf<ShoppingListItemEntity>() }
+    var showSnackbar by remember { mutableStateOf(false) }
+    var snackbarMessage by remember { mutableStateOf("") }
+    var snackbarType by remember { mutableStateOf(SnackbarType.SUCCESS) }
 
     LaunchedEffect(shoppingItems.size, shoppingItems.toList()) {
         if (draggedIndex == null) {
@@ -122,7 +132,7 @@ fun ShoppingListScreen(
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     IconButton(onClick = { coroutineScope.launch { scaffoldState.drawerState.open() } }) {
-                        Icon(Icons.Default.Menu, contentDescription = "Menu")
+                        Icon(Icons.Default.Menu, tint= Color.White, contentDescription = "Menu")
                     }
                     // List selector
                     Box(modifier = Modifier.weight(1f)) {
@@ -168,13 +178,39 @@ fun ShoppingListScreen(
                                             modifier = Modifier.fillMaxWidth(),
                                             horizontalArrangement = Arrangement.SpaceBetween
                                         ) {
-                                            Text(listWith.list.name)
-                                            if (selectedListName == listWith.list.name) {
-                                                Icon(
-                                                    Icons.Default.Check,
-                                                    contentDescription = null,
-                                                    tint = Color(0xFF6A1B9A)
-                                                )
+                                            Text(listWith.list.name,
+                                                modifier = Modifier.weight(1f)
+                                            )
+
+                                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                                // Check ikona ako je selektovana
+                                                if (selectedListName == listWith.list.name) {
+                                                    Icon(
+                                                        Icons.Default.Check,
+                                                        contentDescription = null,
+                                                        tint = Color(0xFF6A1B9A),
+                                                        modifier = Modifier.size(20.dp)
+                                                    )
+                                                    Spacer(Modifier.width(8.dp))
+                                                }
+
+                                                // NOVO - Delete ikona
+                                                IconButton(
+                                                    onClick = {
+                                                        listToDeleteId = listWith.list.id
+                                                        listToDeleteName = listWith.list.name
+                                                        showDeleteDialog = true
+                                                        dropdownExpanded = false
+                                                    },
+                                                    modifier = Modifier.size(32.dp)
+                                                ) {
+                                                    Icon(
+                                                        Icons.Default.Delete,
+                                                        contentDescription = "Delete list",
+                                                        tint = Color(0xFFEF5350),
+                                                        modifier = Modifier.size(18.dp)
+                                                    )
+                                                }
                                             }
                                         }
                                     }
@@ -201,10 +237,13 @@ fun ShoppingListScreen(
                                     if(listWith.list.name == selectedListName!!)
                                         listWith.items = shoppingItems.toList()
                                 }
+                                snackbarMessage = "List '${selectedListName}' updated"
+                                snackbarType = SnackbarType.SUCCESS
+                                showSnackbar = true
+
                                 coroutineScope.launch {
-                                    scaffoldState.snackbarHostState.showSnackbar(
-                                        "List '${selectedListName}' updated"
-                                    )
+                                    kotlinx.coroutines.delay(3000)
+                                    showSnackbar = false
                                 }
                             } else {
                                 showSaveDialog = true
@@ -212,7 +251,7 @@ fun ShoppingListScreen(
                             }
                         }
                     ) {
-                        Icon(Icons.Default.Check, contentDescription = "Save list")
+                        Icon(Icons.Default.Check,tint = Color.White, contentDescription = "Save list")
                     }
                 }
             }
@@ -589,6 +628,20 @@ fun ShoppingListScreen(
                 }
             }
         }
+        if (showSnackbar) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(bottom = 16.dp),
+                contentAlignment = Alignment.BottomCenter
+            ) {
+                CustomSnackbar(
+                    message = snackbarMessage,
+                    type = snackbarType,
+                    onDismiss = { showSnackbar = false }
+                )
+            }
+        }
     }
 
     // Save Dialog
@@ -655,8 +708,13 @@ fun ShoppingListScreen(
                             uiItem
                         }, existingListId = null /* ili current saved id ako update */)
                         showSaveDialog = false
+                        snackbarMessage = "Saved as '$name'"
+                        snackbarType = SnackbarType.SUCCESS
+                        showSnackbar = true
+
                         coroutineScope.launch {
-                            scaffoldState.snackbarHostState.showSnackbar("Saved as '$name'")
+                            kotlinx.coroutines.delay(3000)
+                            showSnackbar = false
                         }
                     },
                     colors = ButtonDefaults.buttonColors(
@@ -741,8 +799,13 @@ fun ShoppingListScreen(
                             uiItem
                         }, existingListId = null /* ili current saved id ako update */)
                         showCreateListDialog = false
+                        snackbarMessage = "Created '$name'"
+                        snackbarType = SnackbarType.SUCCESS
+                        showSnackbar = true
+
                         coroutineScope.launch {
-                            scaffoldState.snackbarHostState.showSnackbar("Created '$name'")
+                            kotlinx.coroutines.delay(3000)
+                            showSnackbar = false
                         }
                     },
                     colors = ButtonDefaults.buttonColors(
@@ -755,6 +818,87 @@ fun ShoppingListScreen(
             },
             dismissButton = {
                 TextButton(onClick = { showCreateListDialog = false }) {
+                    Text("CANCEL", color = Color.Gray)
+                }
+            }
+        )
+    }
+    // Delete Confirmation Dialog
+    if (showDeleteDialog && listToDeleteId != null && listToDeleteName != null) {
+        AlertDialog(
+            onDismissRequest = {
+                showDeleteDialog = false
+                listToDeleteId = null
+                listToDeleteName = null
+            },
+            backgroundColor = Color.White,
+            shape = RoundedCornerShape(20.dp),
+            title = {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        Icons.Default.Delete,
+                        contentDescription = null,
+                        tint = Color(0xFFEF5350),
+                        modifier = Modifier.size(28.dp)
+                    )
+                    Spacer(Modifier.width(12.dp))
+                    Text(
+                        "Delete List?",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 20.sp
+                    )
+                }
+            },
+            text = {
+                Text(
+                    "Are you sure you want to delete '$listToDeleteName'? This action cannot be undone.",
+                    fontSize = 16.sp,
+                    color = Color.DarkGray
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        listToDeleteId?.let { id ->
+                            // Pozovi ViewModel metodu sa ID-jem
+                            vm.deleteList(id)
+
+                            // Ako je obrisana trenutno selektovana lista, resetuj
+                            if (selectedListName == listToDeleteName) {
+                                selectedListName = null
+                                shoppingItems.clear()
+                                displayList.clear()
+                            }
+
+                            snackbarMessage = "Deleted '$listToDeleteName'"
+                            snackbarType = SnackbarType.SUCCESS
+                            showSnackbar = true
+
+                            coroutineScope.launch {
+                                kotlinx.coroutines.delay(3000)
+                                showSnackbar = false
+                            }
+                        }
+                        showDeleteDialog = false
+                        listToDeleteId = null
+                        listToDeleteName = null
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        backgroundColor = Color(0xFFEF5350)
+                    ),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Text("DELETE", color = Color.White, fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = {
+                        showDeleteDialog = false
+                        listToDeleteId = null
+                        listToDeleteName = null
+                    }
+                ) {
                     Text("CANCEL", color = Color.Gray)
                 }
             }

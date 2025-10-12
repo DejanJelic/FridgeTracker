@@ -32,6 +32,5 @@ class ShoppingListViewModel(private val repo: ShoppingListRepository) : ViewMode
             repo.saveList(name, entities, existingListId)
         }
     }
-
     fun deleteList(listId: Long) = viewModelScope.launch { repo.deleteList(listId) }
 }

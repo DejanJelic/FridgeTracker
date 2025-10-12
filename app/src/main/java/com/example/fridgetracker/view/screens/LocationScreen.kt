@@ -84,7 +84,7 @@ fun LocationScreen(
                     IconButton(onClick = { coroutineScope.launch { scaffoldState.drawerState.open() } }) {
                         Icon(Icons.Default.Menu, contentDescription = "Menu", tint = Color.White)
                     }
-                    Text("Locations", style = MaterialTheme.typography.h6, modifier = Modifier.weight(1f))
+                    Text("Locations", color = Color.White, style = MaterialTheme.typography.h6, modifier = Modifier.weight(1f))
                 }
             }
         },

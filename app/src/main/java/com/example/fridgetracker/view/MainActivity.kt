@@ -23,6 +23,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.ContextCompat
 import androidx.core.app.ActivityCompat
+import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.work.Constraints
 import androidx.work.ExistingPeriodicWorkPolicy
@@ -32,10 +33,13 @@ import androidx.work.WorkManager
 import com.example.fridgetracker.data.AppDatabase
 import com.example.fridgetracker.repository.ProductRepository
 import com.example.fridgetracker.repository.ShoppingListRepository
+import com.example.fridgetracker.repository.UserProfileRepository
 import com.example.fridgetracker.view_model.ProductViewModel
 import com.example.fridgetracker.view_model.ProductViewModelFactory
 import com.example.fridgetracker.view_model.ShoppingListViewModel
 import com.example.fridgetracker.view_model.ShoppingListViewModelFactory
+import com.example.fridgetracker.view_model.UserProfileViewModel
+import com.example.fridgetracker.view_model.UserProfileViewModelFactory
 import com.example.fridgetracker.worker.ExpiryCheckWorker
 import java.util.concurrent.TimeUnit
 
@@ -47,6 +51,14 @@ class MainActivity : ComponentActivity() {
         val factory = ProductViewModelFactory(repo)
         val shoppingDao = AppDatabase.getInstance(application).shoppingListDao()
         val shoppingRepository = ShoppingListRepository(shoppingDao)
+        val shoppingFactory = ShoppingListViewModelFactory(shoppingRepository)
+
+
+        val userProfileDao = AppDatabase.getInstance(application).userProfileDao()
+        val userProfileRepository = UserProfileRepository(userProfileDao)
+        val userProfileViewModelFactory = UserProfileViewModelFactory(userProfileRepository)
+        val userProfileViewModel = ViewModelProvider(this, userProfileViewModelFactory)
+            .get(UserProfileViewModel::class.java)
         // Schedule periodic worker once (keep existing work if already scheduled)
         val periodic = PeriodicWorkRequestBuilder<ExpiryCheckWorker>(1, TimeUnit.DAYS)
             .setConstraints(
@@ -67,8 +79,9 @@ class MainActivity : ComponentActivity() {
         setContent {
             RequestNotificationsWithMemory()
             val vm: ProductViewModel = viewModel(factory = factory)
-            val shoppingViewModel: ShoppingListViewModel = viewModel(factory = ShoppingListViewModelFactory(shoppingRepository))
-            AppNavHost(productViewModel = vm, shoppingViewModel = shoppingViewModel)
+            val shoppingViewModel: ShoppingListViewModel = viewModel(factory = shoppingFactory)
+            val userProfileViewModel: UserProfileViewModel = viewModel(factory = userProfileViewModelFactory)
+            AppNavHost(productViewModel = vm, shoppingViewModel = shoppingViewModel, userProfileViewModel = userProfileViewModel)
         }
     }
 }

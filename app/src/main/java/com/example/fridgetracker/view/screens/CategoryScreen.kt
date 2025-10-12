@@ -91,7 +91,7 @@ fun CategoryScreen(
                     IconButton(onClick = { coroutineScope.launch { scaffoldState.drawerState.open() } }) {
                         Icon(Icons.Default.Menu, contentDescription = "Menu", tint = Color.White)
                     }
-                    Text("Categories", style = MaterialTheme.typography.h6, modifier = Modifier.weight(1f))
+                    Text("Categories", color = Color.White, style = MaterialTheme.typography.h6, modifier = Modifier.weight(1f))
                 }
             }
         },

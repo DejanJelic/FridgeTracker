@@ -101,11 +101,11 @@ fun AppDrawer(
         Divider(modifier = Modifier.padding(vertical = 8.dp))
 
         DrawerMenuItem(
-            icon = Icons.Default.Refresh,
+            icon = Icons.Default.AccountCircle,
             title = "Account",
-            isSelected = false,
+            isSelected = currentRoute == "account",
             onClick = {
-                // TODO: Navigate to account
+                navController.navigate("account")
                 closeDrawer()
             }
         )
