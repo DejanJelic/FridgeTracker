@@ -9,6 +9,13 @@ import com.example.fridgetracker.data.AppDatabase
 import com.example.fridgetracker.view.notifications.NotificationHelper
 import java.time.LocalDate
 
+/**
+ * A [CoroutineWorker] responsible for periodically checking for products that are nearing their expiration date
+ * or have passed their recommended consumption period after opening. If such products are found,
+ * it triggers a system notification to alert the user.
+ *
+ * This worker is designed to be scheduled by WorkManager to run at regular intervals (e.g., once a day).
+ */
 class ExpiryCheckWorker(context: android.content.Context, params: WorkerParameters) : CoroutineWorker(context, params) {
     override suspend fun doWork(): Result {
         val ctx = applicationContext

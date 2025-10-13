@@ -5,8 +5,6 @@ import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.lifecycle.lifecycleScope
-import kotlinx.coroutines.launch
 
 class BarcodeScannerActivity : ComponentActivity() {
 
@@ -29,8 +27,8 @@ class BarcodeScannerActivity : ComponentActivity() {
         setResult(Activity.RESULT_OK, resultIntent)
         finish()
 
-        // Ako umesto vraćanja rezultata želiš da uradiš DB lookup,
-        // koristi lifecycleScope i coroutines (primer):
+        // If instead of returning the results you want to do a DB lookup,
+        // use lifecycleScope and coroutines (example):
         // lifecycleScope.launch {
         //     val product = withContext(Dispatchers.IO) { /* vm.findByBarcode(code) */ }
         //     // navigacija ili otvaranje detalja

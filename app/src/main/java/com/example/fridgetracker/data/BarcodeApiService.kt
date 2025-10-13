@@ -6,6 +6,12 @@ import retrofit2.http.GET
 import retrofit2.http.Path
 
 interface BarcodeApiService {
+    /**
+     * Fetches product information for the given barcode.
+     *
+     * @param barcode The barcode string to look up.
+     * @return Response containing OpenFoodFactsResponse.
+     */
     @GET("api/v0/product/{barcode}.json")
     suspend fun getProductByBarcode(
         @Path("barcode") barcode: String

@@ -20,7 +20,6 @@ class ProductViewModel(private val repo: ProductRepository) : ViewModel() {
     private val _prefill = MutableStateFlow<ProductDraft?>(null)
     val prefill: StateFlow<ProductDraft?> = _prefill.asStateFlow()
 
-    // Loading states (optional but recommended)
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
     fun setPrefill(draft: ProductDraft?) {
@@ -47,8 +46,5 @@ class ProductViewModel(private val repo: ProductRepository) : ViewModel() {
                 _isLoading.value = false
             }
         }
-    }
-    fun clearPrefill() {
-        _prefill.value = null
     }
 }

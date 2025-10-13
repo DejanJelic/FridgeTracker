@@ -1,7 +1,6 @@
 package com.example.fridgetracker.utilities
 
 import android.Manifest
-import android.app.Activity
 import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Build
@@ -14,7 +13,6 @@ import androidx.compose.material.Text
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.platform.LocalContext
-import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 
 private const val PREFS_NAME = "app_prefs"
@@ -26,7 +24,6 @@ fun RequestNotificationPermission() {
     if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return
 
     val context = LocalContext.current
-    val activity = context as? Activity
     val permission = Manifest.permission.POST_NOTIFICATIONS
 
     // SharedPreferences to track if permission was requested
@@ -94,9 +91,4 @@ fun RequestNotificationPermission() {
             }
         )
     }
-
-    // Show settings button if permanently denied
-    val shouldShowRationale = activity?.let {
-        ActivityCompat.shouldShowRequestPermissionRationale(it, permission)
-    } ?: false
 }

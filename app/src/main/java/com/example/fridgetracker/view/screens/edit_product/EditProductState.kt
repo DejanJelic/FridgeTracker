@@ -12,6 +12,7 @@ import com.example.fridgetracker.model.Product
 import com.example.fridgetracker.view_model.ProductViewModel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.time.LocalDate
@@ -30,7 +31,7 @@ class EditProductState(
     var quantity by mutableDoubleStateOf(1.0)
     var unit by mutableStateOf("pcs")
     var daysUntilExpiryStr by mutableStateOf("30")
-    var purchaseDate by mutableStateOf(LocalDate.now())
+    var purchaseDate: LocalDate by mutableStateOf(LocalDate.now())
     var alreadyOpened by mutableStateOf(false)
     var openIndividually by mutableStateOf(false)
     var category by mutableStateOf("No category")
@@ -159,7 +160,7 @@ class EditProductState(
                 }
 
                 // Show success for a moment
-                kotlinx.coroutines.delay(1200)
+                delay(1200)
 
                 // Update UI on Main thread and navigate
                 withContext(Dispatchers.Main) {
@@ -225,7 +226,7 @@ class EditProductState(
                     }
 
                     // Add minimum delay for better UX
-                    kotlinx.coroutines.delay(1300)
+                    delay(1300)
 
                     // Do IO work
                     withContext(Dispatchers.IO) {
@@ -238,14 +239,11 @@ class EditProductState(
                         showSuccessDelete = true
                     }
 
-                    // Show success for a moment
-                    kotlinx.coroutines.delay(200)
-
                     // Update UI on Main thread
                     withContext(Dispatchers.Main) {
-                        isDeleting = false
                         showSuccessDelete = false
                         onSuccess()
+                        isDeleting = false
                     }
                 } catch (t: Throwable) {
                     withContext(Dispatchers.Main) {
@@ -272,7 +270,7 @@ class EditProductState(
                     }
 
                     // Add minimum delay for better UX
-                    kotlinx.coroutines.delay(600)
+                    delay(600)
 
                     val remaining = product.quantity - consumedQuantity
 
@@ -295,7 +293,7 @@ class EditProductState(
                     }
 
                     // Show success for a moment
-                    kotlinx.coroutines.delay(1200)
+                    delay(1200)
 
                     // Update UI on Main thread
                     withContext(Dispatchers.Main) {

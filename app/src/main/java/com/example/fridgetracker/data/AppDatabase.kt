@@ -11,6 +11,10 @@ import com.example.fridgetracker.model.ShoppingListEntity
 import com.example.fridgetracker.model.ShoppingListItemEntity
 import com.example.fridgetracker.model.UserProfile
 
+/**
+ * Main Room database for the app.
+ * Includes all entities and migration logic.
+ */
 @Database(entities = [Product::class, ShoppingListEntity::class,ShoppingListItemEntity::class, UserProfile::class ],  version = 6, exportSchema = false)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun productDao(): ProductDao
@@ -18,11 +22,19 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun userProfileDao(): UserProfileDao
     companion object {
         @Volatile private var INSTANCE: AppDatabase? = null
+        /**
+         * Migration from version 1 to 3.
+         * Adds 'category' column to products table.
+         */
         val MIGRATION_1_3: Migration = object : Migration(1, 3) {
             override fun migrate(database: SupportSQLiteDatabase) {
                 database.execSQL("ALTER TABLE products ADD COLUMN category TEXT")
             }
         }
+        /**
+         * Migration from version 3 to 4.
+         * Adds several columns to products table for comments, price, and notification settings.
+         */
         val MIGRATION_3_4: Migration = object : Migration(3, 4) {
             override fun migrate(database: SupportSQLiteDatabase) {
                 database.execSQL("ALTER TABLE products ADD COLUMN comment TEXT")
@@ -33,6 +45,10 @@ abstract class AppDatabase : RoomDatabase() {
                 database.execSQL("ALTER TABLE products ADD COLUMN afterOpeningDays INTEGER NOT NULL DEFAULT 2")
             }
         }
+        /**
+         * Migration from version 4 to 5.
+         * Creates shopping_lists and shopping_list_items tables.
+         */
         val MIGRATION_4_TO_5 = object : Migration(4, 5) {
             override fun migrate(database: SupportSQLiteDatabase) {
                 database.execSQL("""
@@ -56,6 +72,10 @@ abstract class AppDatabase : RoomDatabase() {
                 database.execSQL("CREATE INDEX IF NOT EXISTS `index_shopping_list_items_listId` ON `shopping_list_items` (`listId`)")
             }
         }
+        /**
+         * Migration from version 5 to 6.
+         * Creates user_profile table.
+         */
         val MIGRATION_5_TO_6 = object : Migration(5, 6) {
             override fun migrate(database: SupportSQLiteDatabase) {
                 database.execSQL("""
@@ -81,6 +101,10 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        /**
+         * Returns the singleton instance of AppDatabase.
+         * Ensures only one instance exists throughout the app.
+         */
         fun getInstance(context: Context): AppDatabase =
             INSTANCE ?: synchronized(this) {
                 val inst = Room.databaseBuilder(

@@ -14,13 +14,13 @@ class ProductRepository(private val dao: ProductDao, private val context: Contex
     fun observeById(id:Long): Flow<Product?> = dao.observeById(id)
     suspend fun upsert(product: Product) {
         withContext(kotlinx.coroutines.Dispatchers.IO) {
-            // ako je update (id != 0), dohvatimo staru vrednost da bismo kasnije obrisali staru sliku
+            // if update (id != 0), we retrieve the old value to delete the old image later
             val old = if (product.id != 0L) dao.getById(product.id) else null
 
             // upsert u DB (insert onConflict=REPLACE)
             dao.upsert(product)
 
-            // Ukoliko je stara slika bila interna i različita od nove, izbriši je
+            // If the old image was internal and different from the new one, delete it
             try {
                 val oldUri = old?.photoUri
                 val newUri = product.photoUri
@@ -28,21 +28,18 @@ class ProductRepository(private val dao: ProductDao, private val context: Contex
                     com.example.fridgetracker.utilities.ImageFileUtils.deleteInternalFileIfExists(oldUri, context)
                 }
             } catch (t: Throwable) {
-                // loguj, ali ne prekidaj tok
-                android.util.Log.w("ProductRepository", "Failed to delete old image", t)
+                // log in, but don't interrupt the flow
+                Log.w("ProductRepository", "Failed to delete old image", t)
             }
         }
     }
     suspend fun delete(product: Product) {
         withContext(kotlinx.coroutines.Dispatchers.IO) {
             try {
-                // pokušaj prvo obrisati fajl (neobavezno: može i obrnuto)
                 com.example.fridgetracker.utilities.ImageFileUtils.deleteInternalFileIfExists(product.photoUri, context)
             } catch (t: Throwable) {
-                android.util.Log.w("ProductRepository", "Failed to delete product image on delete", t)
+                Log.w("ProductRepository", "Failed to delete product image on delete", t)
             }
-
-            // onda izbriši iz DB
             dao.delete(product)
         }
     }

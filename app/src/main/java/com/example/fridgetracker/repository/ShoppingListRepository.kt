@@ -31,7 +31,7 @@ class ShoppingListRepository(private val dao: ShoppingListDao) {
             dao.insertItems(itemsWithListId)
             newId
         }
-        return listId ?: -1L
+        return listId
     }
 
     suspend fun deleteList(listId: Long) {
