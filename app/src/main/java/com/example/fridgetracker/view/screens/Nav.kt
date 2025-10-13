@@ -19,7 +19,7 @@ fun AppNavHost(productViewModel: ProductViewModel,shoppingViewModel: ShoppingLis
         composable("home") { HomeScreen(navController,onAdd = { navController.navigate("add") }, onOpen = { id -> navController.navigate("edit/$id") },
             vm = productViewModel) }
         composable("add") {
-            EditProductScreen(
+            EditProductScreenNew(
             navController = navController,
             vm = productViewModel,
             productId = null
@@ -30,7 +30,7 @@ fun AppNavHost(productViewModel: ProductViewModel,shoppingViewModel: ShoppingLis
         }
         composable("edit/{id}") { backStackEntry ->
             val id = backStackEntry.arguments?.getString("id")?.toLongOrNull()
-            EditProductScreen(
+            EditProductScreenNew(
                 navController = navController,
                 vm = productViewModel,
                 productId = id // Edit mode
