@@ -2,6 +2,12 @@ package com.example.fridgetracker.view.screens.edit_product
 
 import android.app.DatePickerDialog
 import android.content.Context
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -15,7 +21,7 @@ import androidx.compose.material3.SmallFloatingActionButton
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
@@ -72,7 +78,9 @@ fun EditProductBottomBar(
             }
 
             Divider(
-                modifier = Modifier.width(1.dp).height(48.dp),
+                modifier = Modifier
+                    .width(1.dp)
+                    .height(48.dp),
                 color = Color.White.copy(alpha = 0.3f)
             )
 
@@ -134,17 +142,63 @@ fun EditProductFAB(
 // Loading Screen
 @Composable
 fun LoadingScreen(message: String) {
+    val infiniteTransition = rememberInfiniteTransition(label = "loading")
+    val scale by infiniteTransition.animateFloat(
+        initialValue = 0.9f,
+        targetValue = 1.1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(800, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "scale"
+    )
+
+    val isSuccess = message.startsWith("✓")
+
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .alpha(0.85f)
-            .background(Color.White),
+            .background(Color.Black.copy(alpha = 0.7f)),
         contentAlignment = Alignment.Center
     ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            CircularProgressIndicator()
-            Spacer(modifier = Modifier.height(12.dp))
-            Text(text = message)
+        Card(
+            shape = RoundedCornerShape(20.dp),
+            elevation = 12.dp,
+            backgroundColor = Color.White,
+            modifier = Modifier.scale(scale)
+        ) {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier.padding(32.dp)
+            ) {
+                if (isSuccess) {
+                    Icon(
+                        imageVector = Icons.Default.CheckCircle,
+                        contentDescription = "Success",
+                        tint = Color(0xFF4CAF50),
+                        modifier = Modifier.size(48.dp)
+                    )
+                } else {
+                    CircularProgressIndicator(
+                        color = Color(0xFF6A1B9A),
+                        strokeWidth = 5.dp,
+                        modifier = Modifier.size(48.dp)
+                    )
+                }
+                Spacer(modifier = Modifier.height(20.dp))
+                Text(
+                    text = message,
+                    style = MaterialTheme.typography.h6,
+                    fontWeight = FontWeight.Medium,
+                    color = if (isSuccess) Color(0xFF4CAF50) else Color(0xFF6A1B9A)
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = if (isSuccess) "Redirecting..." else "Please wait...",
+                    style = MaterialTheme.typography.caption,
+                    color = Color.Gray
+                )
+            }
         }
     }
 }

@@ -1,6 +1,5 @@
 package com.example.fridgetracker.view.screens
 
-import android.R
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState

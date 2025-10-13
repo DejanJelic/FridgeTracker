@@ -7,7 +7,6 @@ import androidx.activity.compose.ManagedActivityResultLauncher
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.*
-import androidx.compose.runtime.snapshots.Snapshot
 import androidx.core.net.toUri
 import com.example.fridgetracker.model.Product
 import com.example.fridgetracker.view_model.ProductViewModel
@@ -49,6 +48,10 @@ class EditProductState(
     var isLoading by mutableStateOf(productId != null)
     var isSaving by mutableStateOf(false)
     var isDeleting by mutableStateOf(false)
+    var showSuccessSave by mutableStateOf(false)
+    var showSuccessDelete by mutableStateOf(false)
+    var showSuccessConsume by mutableStateOf(false)
+    var consumeSuccessMessage by mutableStateOf("")
     var showConsumeDialog by mutableStateOf(false)
     var showTrashDialog by mutableStateOf(false)
     var showAlreadyOpenedDialog by mutableStateOf(false)
@@ -137,18 +140,38 @@ class EditProductState(
             afterOpeningNum = afterOpeningNum
         )
 
-        coroutineScope.launch  {
+        coroutineScope.launch {
             try {
-                Snapshot.withMutableSnapshot {
+                // Set loading state on Main thread first
+                withContext(Dispatchers.Main) {
                     isSaving = true
                 }
-                vm.upsert(product)
-                onSuccess()
-            } catch (t: Throwable) {
-                onError("✗ Save failed: ${t.message ?: "error"}")
-            } finally {
-                Snapshot.withMutableSnapshot {
+
+                // Do IO work
+                withContext(Dispatchers.IO) {
+                    vm.upsert(product)
+                }
+
+                // Show success state for a moment while still loading
+                withContext(Dispatchers.Main) {
+                    // Change loading message to success but keep loading active
+                    showSuccessSave = true
+                }
+
+                // Show success for a moment
+                kotlinx.coroutines.delay(1200)
+
+                // Update UI on Main thread and navigate
+                withContext(Dispatchers.Main) {
                     isSaving = false
+                    showSuccessSave = false
+                    onSuccess()
+                }
+            } catch (t: Throwable) {
+                withContext(Dispatchers.Main) {
+                    isSaving = false
+                    showSuccessSave = false
+                    onError("✗ Save failed: ${t.message ?: "error"}")
                 }
             }
         }
@@ -194,20 +217,42 @@ class EditProductState(
         onError: (String) -> Unit
     ) {
         existingProduct?.let { product ->
-            coroutineScope.launch  {
+            coroutineScope.launch {
                 try {
-                    Snapshot.withMutableSnapshot {
+                    // Set loading state on Main thread first
+                    withContext(Dispatchers.Main) {
                         isDeleting = true
                     }
-                    vm.delete(product)
-                    onSuccess()
-                } catch (t: Throwable) {
-                    onError("✗ Delete failed: ${t.message ?: "error"}")
-                } finally {
-                    Snapshot.withMutableSnapshot {
-                        isDeleting = false
+
+                    // Add minimum delay for better UX
+                    kotlinx.coroutines.delay(1300)
+
+                    // Do IO work
+                    withContext(Dispatchers.IO) {
+                        vm.delete(product)
                     }
 
+                    // Show success state for a moment while still loading
+                    withContext(Dispatchers.Main) {
+                        // Change loading message to success but keep loading active
+                        showSuccessDelete = true
+                    }
+
+                    // Show success for a moment
+                    kotlinx.coroutines.delay(200)
+
+                    // Update UI on Main thread
+                    withContext(Dispatchers.Main) {
+                        isDeleting = false
+                        showSuccessDelete = false
+                        onSuccess()
+                    }
+                } catch (t: Throwable) {
+                    withContext(Dispatchers.Main) {
+                        isDeleting = false
+                        showSuccessDelete = false
+                        onError("✗ Delete failed: ${t.message ?: "error"}")
+                    }
                 }
             }
         }
@@ -221,26 +266,49 @@ class EditProductState(
         existingProduct?.let { product ->
             coroutineScope.launch {
                 try {
-                    Snapshot.withMutableSnapshot {
+                    // Set loading state on Main thread first
+                    withContext(Dispatchers.Main) {
                         isSaving = true
                     }
+
+                    // Add minimum delay for better UX
+                    kotlinx.coroutines.delay(600)
+
                     val remaining = product.quantity - consumedQuantity
 
-                    if (remaining <= 0.0) {
-                        vm.delete(product)
-                        onSuccess("✓ Product consumed completely")
-                    } else {
-                        val updated = product.copy(quantity = remaining)
-                        vm.upsert(updated)
-                        onSuccess("✓ Consumed ${consumedQuantity.toInt()} items")
+                    // Do IO work
+                    withContext(Dispatchers.IO) {
+                        if (remaining <= 0.0) {
+                            vm.delete(product)
+                        } else {
+                            val updated = product.copy(quantity = remaining)
+                            vm.upsert(updated)
+                        }
+                    }
+
+                    // Show success state for a moment while still loading
+                    withContext(Dispatchers.Main) {
+                        // Change loading message to success but keep loading active
+                        showSuccessConsume = true
+                        consumeSuccessMessage =
+                            if (remaining <= 0.0) "✓ Product consumed completely" else "✓ Consumed ${consumedQuantity.toInt()} items"
+                    }
+
+                    // Show success for a moment
+                    kotlinx.coroutines.delay(1200)
+
+                    // Update UI on Main thread
+                    withContext(Dispatchers.Main) {
+                        isSaving = false
+                        showConsumeDialog = false
+                        showSuccessConsume = false
+                        onSuccess(consumeSuccessMessage)
                     }
                 } catch (t: Throwable) {
-                    onError("✗ Error: ${t.message ?: "unknown"}")
-                } finally {
-                    Snapshot.withMutableSnapshot {
+                    withContext(Dispatchers.Main) {
                         isSaving = false
+                        onError("✗ Error: ${t.message ?: "unknown"}")
                     }
-                    showConsumeDialog = false
                 }
             }
         }
@@ -293,24 +361,36 @@ fun rememberEditProductState(
 
     state.setupLaunchers(imagePickerLauncher, takePictureLauncher)
 
-    // Load product data
     LaunchedEffect(productId) {
-        android.util.Log.d("EditProduct", "Loading started, isLoading=${state.isLoading}")
         if (productId != null) {
+            state.isLoading = true
+
             vm.getProductFlow(productId).collect { product ->
-                android.util.Log.d("EditProduct", "Product received: ${product?.name}")
                 if (product != null) {
                     state.existingProduct = product
                     state.populateFromProduct(product)
                 }
                 state.isLoading = false
-                android.util.Log.d("EditProduct", "Loading finished, isLoading=${state.isLoading}")
             }
         } else {
             state.isLoading = false
-            android.util.Log.d("EditProduct", "No productId, isLoading=${state.isLoading}")
         }
     }
+    val prefill by vm.prefill.collectAsState()
 
+    LaunchedEffect(prefill) {
+        if (!state.isEditMode && prefill != null) {
+            prefill?.let {
+                state.name = it.name
+                state.barcode = it.barcode ?: ""
+                state.quantity = it.quantity
+                state.unit = it.unit
+                state.daysUntilExpiryStr = it.daysUntilExpiry.toString()
+                state.category = it.category ?: "No category"
+                state.location = it.location ?: "Not stored"
+                state.imageUrlFromApi = it.imageUrl
+            }
+        }
+    }
     return state
 }

@@ -1,7 +1,6 @@
 package com.example.fridgetracker.view.screens
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -11,7 +10,6 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Category
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Restaurant
@@ -27,7 +25,6 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
 import androidx.navigation.NavController
 import com.example.fridgetracker.view_model.ProductViewModel
@@ -140,8 +137,8 @@ fun DraggableCategoryList(
     // Drag state
     var draggedIndex by remember { mutableStateOf<Int?>(null) }    // original index of dragged item
     var dragging by remember { mutableStateOf(false) }
-    var dragY by remember { mutableStateOf(0f) }                   // pointer Y relative to LazyColumn
-    var draggedItemHeight by remember { mutableStateOf(0) }       // px
+    var dragY by remember { mutableFloatStateOf(0f) }                   // pointer Y relative to LazyColumn
+    var draggedItemHeight by remember { mutableIntStateOf(0) }       // px
     var insertIndex by remember { mutableStateOf<Int?>(null) }    // insertion index (0..n)
 
     // compute insertion index based on y

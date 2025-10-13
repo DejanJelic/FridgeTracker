@@ -32,6 +32,7 @@ fun EditProductDialogs(
             product = state.existingProduct!!,
             onDismiss = { state.showConsumeDialog = false },
             onConfirm = { consumedQuantity ->
+                state.showConsumeDialog = false
                 state.consumeProduct(
                     consumedQuantity = consumedQuantity,
                     onSuccess = { message ->
@@ -58,6 +59,7 @@ fun EditProductDialogs(
             product = state.existingProduct!!,
             onDismiss = { state.showTrashDialog = false },
             onConfirm = {
+                state.showTrashDialog = false
                 state.deleteProduct(
                     onSuccess = {
                         coroutineScope.launch {

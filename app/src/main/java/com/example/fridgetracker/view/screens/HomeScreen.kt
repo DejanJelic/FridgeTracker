@@ -618,7 +618,6 @@ fun GroupHeaderColored(title: String, count: Int, color: Color) {
             .padding(horizontal = 12.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // Capsule sa background bojom
         Surface(
             shape = RoundedCornerShape(20.dp),
             color = color,
@@ -645,20 +644,12 @@ fun GroupHeaderColored(title: String, count: Int, color: Color) {
         }
     }
 }
-
-/* -------------------------
-   Reused UI pieces (ProductCard + helpers)
-   If već imaš ovde ili u drugom fajlu, ostavi svoje.
-   ------------------------- */
-
 @Composable
 fun ProductCard(
     product: Product,
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val context = LocalContext.current
-
     Card(
         modifier = modifier
             .fillMaxWidth()

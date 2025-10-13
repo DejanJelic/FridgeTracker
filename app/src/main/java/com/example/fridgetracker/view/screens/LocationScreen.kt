@@ -10,16 +10,13 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Place
-import androidx.compose.material.icons.filled.Image
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.scale
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
@@ -131,8 +128,8 @@ fun DraggableLocationList(
 
     // drag state
     var draggedIndex by remember { mutableStateOf<Int?>(null) }      // index of the item being dragged (original list index)
-    var dragY by remember { mutableStateOf(0f) }                    // current Y (local to LazyColumn) of pointer
-    var draggedItemHeight by remember { mutableStateOf(0) }         // px height of dragged item
+    var dragY by remember { mutableFloatStateOf(0f) }                    // current Y (local to LazyColumn) of pointer
+    var draggedItemHeight by remember { mutableIntStateOf(0) }         // px height of dragged item
     var insertIndex by remember { mutableStateOf<Int?>(null) }      // current insertion index (0..n)
     var dragging by remember { mutableStateOf(false) }
 
@@ -143,7 +140,6 @@ fun DraggableLocationList(
         // find the item whose middle the pointer is over; default to nearest visible
         for (info in visible) {
             val top = info.offset.toFloat()
-            val bottom = top + info.size
             val mid = top + info.size / 2f
             if (y < mid) {
                 return info.index
