@@ -26,7 +26,6 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
@@ -44,10 +43,7 @@ import java.io.File
 import java.io.FileOutputStream
 import java.io.OutputStream
 import androidx.compose.ui.window.Dialog
-
-enum class SnackbarType {
-    SUCCESS, ERROR, INFO, WARNING
-}
+import com.example.fridgetracker.utilities.SnackbarType
 @Composable
 fun EditProductScreen(
     navController: NavController,

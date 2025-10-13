@@ -66,13 +66,21 @@ fun CameraPreview(
     onBarcodeDetected: (String) -> Unit
 ) {
     val cameraProviderFuture = remember { ProcessCameraProvider.getInstance(context) }
+    // Use remember to prevent recreating executor on every recomposition
     val analyzerExecutor = remember { Executors.newSingleThreadExecutor() }
-    val scanner: BarcodeScanner = BarcodeScanning.getClient()
-    // Use rememberUpdatedState so the analyzer uses latest lambda
+    val scanner: BarcodeScanner = remember { BarcodeScanning.getClient() }
+
+    // Track if detected to prevent multiple callbacks
+    var hasDetected by remember { mutableStateOf(false) }
     val onDetectedState by rememberUpdatedState(onBarcodeDetected)
 
     DisposableEffect(cameraProviderFuture) {
         onDispose {
+            try {
+                cameraProviderFuture.get()?.unbindAll()
+            } catch (t: Throwable) {
+                Log.w(TAG, "Failed to unbind camera", t)
+            }
             try {
                 analyzerExecutor.shutdown()
             } catch (t: Throwable) {
@@ -87,31 +95,45 @@ fun CameraPreview(
     }
 
     AndroidView(factory = { ctx ->
-        val previewView = PreviewView(ctx).apply { scaleType = PreviewView.ScaleType.FILL_CENTER }
+        val previewView = PreviewView(ctx).apply {
+            scaleType = PreviewView.ScaleType.FILL_CENTER
+        }
 
         cameraProviderFuture.addListener({
             val cameraProvider = cameraProviderFuture.get()
 
-            val preview = Preview.Builder().build().also { it.setSurfaceProvider(previewView.surfaceProvider) }
+            val preview = Preview.Builder().build().also {
+                it.setSurfaceProvider(previewView.surfaceProvider)
+            }
 
             val imageAnalysis = ImageAnalysis.Builder()
                 .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
                 .build()
 
             imageAnalysis.setAnalyzer(analyzerExecutor) { imageProxy: ImageProxy ->
-                processImageProxy(scanner, imageProxy) { rawValue ->
-                    if (!rawValue.isNullOrEmpty()) {
-                        // Pozovi callback na glavnoj niti - veoma važno!
-                        ContextCompat.getMainExecutor(ctx).execute {
-                            onBarcodeDetected(rawValue)
+                // Only process if not already detected
+                if (!hasDetected) {
+                    processImageProxy(scanner, imageProxy) { rawValue ->
+                        if (!rawValue.isNullOrEmpty() && !hasDetected) {
+                            hasDetected = true
+                            ContextCompat.getMainExecutor(ctx).execute {
+                                onDetectedState(rawValue)
+                            }
                         }
                     }
+                } else {
+                    imageProxy.close()
                 }
             }
 
             try {
                 cameraProvider.unbindAll()
-                cameraProvider.bindToLifecycle(lifecycleOwner, CameraSelector.DEFAULT_BACK_CAMERA, preview, imageAnalysis)
+                cameraProvider.bindToLifecycle(
+                    lifecycleOwner,
+                    CameraSelector.DEFAULT_BACK_CAMERA,
+                    preview,
+                    imageAnalysis
+                )
             } catch (e: Exception) {
                 Log.e(TAG, "Binding camera failed", e)
             }
@@ -119,6 +141,7 @@ fun CameraPreview(
 
         previewView
     }, modifier = modifier)
+
 }
 
 @OptIn(ExperimentalGetImage::class)
@@ -135,7 +158,9 @@ private fun processImageProxy(scanner: BarcodeScanner, imageProxy: ImageProxy, o
                 }
                 onResult(found)
             }
-            .addOnFailureListener { /* optionally log */ }
+            .addOnFailureListener { e ->
+                Log.w(TAG, "Barcode detection failed", e)
+            }
             .addOnCompleteListener { imageProxy.close() }
     } else {
         imageProxy.close()

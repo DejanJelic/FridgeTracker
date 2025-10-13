@@ -20,14 +20,35 @@ class ProductViewModel(private val repo: ProductRepository) : ViewModel() {
     private val _prefill = MutableStateFlow<ProductDraft?>(null)
     val prefill: StateFlow<ProductDraft?> = _prefill.asStateFlow()
 
+    // Loading states (optional but recommended)
+    private val _isLoading = MutableStateFlow(false)
+    val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
     fun setPrefill(draft: ProductDraft?) {
         _prefill.value = draft
     }
-    suspend fun findByBarcode(barcode: String): Product? = repo.findByBarcode(barcode)
+    fun findByBarcode(barcode: String, onResult: (Product?) -> Unit) {
+        viewModelScope.launch {
+            val result = repo.findByBarcode(barcode)
+            onResult(result)
+        }
+    }
     fun upsert(product: Product) = viewModelScope.launch { repo.upsert(product) }
     fun delete(product: Product) = viewModelScope.launch { repo.delete(product) }
     fun getProductFlow(id: Long): Flow<Product?> = repo.observeById(id)
-    suspend fun lookupBarcodeOnline(barcode: String): ProductInfo? {
-        return repo.lookupBarcode(barcode)
+    fun lookupBarcodeOnline(barcode: String, onResult: (ProductInfo?) -> Unit) {
+        viewModelScope.launch {
+            _isLoading.value = true
+            try {
+                val result = repo.lookupBarcode(barcode)
+                onResult(result)
+            } catch (e: Exception) {
+                onResult(null)
+            } finally {
+                _isLoading.value = false
+            }
+        }
+    }
+    fun clearPrefill() {
+        _prefill.value = null
     }
 }

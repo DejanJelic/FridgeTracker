@@ -2,7 +2,6 @@ package com.example.fridgetracker.worker
 
 import android.Manifest
 import android.content.pm.PackageManager
-import androidx.compose.runtime.collectAsState
 import androidx.core.content.ContextCompat
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
