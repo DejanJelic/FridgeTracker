@@ -124,7 +124,7 @@ Food waste is a significant issue worldwide. This app addresses the problem by:
     <tr>
       <td><img src="screenshots/homescreen.jpg" width="200"/></td>
       <td><img src="screenshots/editscreen.jpg" width="200"/></td>
-      <td><img src="screenshots/shoppingscreen.jpg" width="200"/></td>
+      <td><img src="screenshots/shoppinglist.jpg" width="200"/></td>
 	<td><img src="screenshots/sidemenu.jpg" width="200"/></td>
     </tr>
   </table>
