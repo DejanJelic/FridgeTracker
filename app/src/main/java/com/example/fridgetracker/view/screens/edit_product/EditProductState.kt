@@ -220,30 +220,30 @@ class EditProductState(
         existingProduct?.let { product ->
             coroutineScope.launch {
                 try {
-                    // Set loading state on Main thread first
                     withContext(Dispatchers.Main) {
                         isDeleting = true
                     }
 
-                    // Add minimum delay for better UX
-                    delay(1300)
-
-                    // Do IO work
-                    withContext(Dispatchers.IO) {
+                    val deleteJob = launch(Dispatchers.IO) {
                         vm.delete(product)
                     }
 
-                    // Show success state for a moment while still loading
+                    // Add minimum delay for better UX
+                    delay(600)
+
+                    // wait for delete to finish
+                    deleteJob.join()
+
                     withContext(Dispatchers.Main) {
-                        // Change loading message to success but keep loading active
                         showSuccessDelete = true
                     }
 
-                    // Update UI on Main thread
+                    delay(400)
+
                     withContext(Dispatchers.Main) {
                         showSuccessDelete = false
-                        onSuccess()
                         isDeleting = false
+                        onSuccess()
                     }
                 } catch (t: Throwable) {
                     withContext(Dispatchers.Main) {
