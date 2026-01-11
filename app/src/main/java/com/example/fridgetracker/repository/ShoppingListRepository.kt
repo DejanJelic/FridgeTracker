@@ -6,7 +6,7 @@ import com.example.fridgetracker.model.ShoppingListItemEntity
 import com.example.fridgetracker.model.ShoppingListWithItems
 import kotlinx.coroutines.flow.Flow
 
-class ShoppingListRepository(private val dao: ShoppingListDao) {
+open class ShoppingListRepository(private val dao: ShoppingListDao) {
 
     fun observeAllLists(): Flow<List<ShoppingListWithItems>> = dao.getAllListsWithItemsFlow()
 

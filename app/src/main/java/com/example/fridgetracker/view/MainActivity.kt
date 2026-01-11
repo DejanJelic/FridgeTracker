@@ -3,12 +3,15 @@ package com.example.fridgetracker.view
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import com.example.fridgetracker.view.screens.AppNavHost
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.fridgetracker.data.AppDatabase
 import com.example.fridgetracker.repository.ProductRepository
 import com.example.fridgetracker.repository.ShoppingListRepository
 import com.example.fridgetracker.repository.UserProfileRepository
+import com.example.fridgetracker.ui.theme.FridgeTrackerTheme
 import com.example.fridgetracker.utilities.RequestNotificationPermission
 import com.example.fridgetracker.utilities.WorkManagerHelper
 import com.example.fridgetracker.view_model.ProductViewModel
@@ -36,14 +39,14 @@ class MainActivity : ComponentActivity() {
     }
     override fun onCreate(savedInstanceState: Bundle?) {
             super.onCreate(savedInstanceState)
-            // ✅ Schedule background worker
+            // Schedule background worker
             WorkManagerHelper.scheduleExpiryCheck(this)
 
             setContent {
-                // ✅ Request notification permission
+                // Request notification permission
                 RequestNotificationPermission()
 
-                // ✅ Create ViewModels with factories
+                // Create ViewModels with factories
                 val productViewModel: ProductViewModel = viewModel(
                     factory = ProductViewModelFactory(productRepository)
                 )
@@ -56,12 +59,16 @@ class MainActivity : ComponentActivity() {
                     factory = UserProfileViewModelFactory(userProfileRepository)
                 )
 
-                // ✅ App navigation
-                AppNavHost(
-                    productViewModel = productViewModel,
-                    shoppingViewModel = shoppingViewModel,
-                    userProfileViewModel = userProfileViewModel
-                )
+                // App navigation
+                FridgeTrackerTheme {
+                    Surface(color = MaterialTheme.colorScheme.background) {
+                        AppNavHost(
+                            productViewModel = productViewModel,
+                            shoppingViewModel = shoppingViewModel,
+                            userProfileViewModel = userProfileViewModel
+                        )
+                    }
+                }
             }
         }
     }

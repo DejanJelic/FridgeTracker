@@ -35,14 +35,15 @@ import com.example.fridgetracker.model.Product
 import com.example.fridgetracker.view_model.ProductViewModel
 import java.time.LocalDate
 import java.time.temporal.ChronoUnit
-import com.google.accompanist.pager.*
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.TextUnit
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
-@OptIn(ExperimentalPagerApi::class, ExperimentalAnimationApi::class)
+@OptIn(ExperimentalAnimationApi::class)
 @Composable
 fun HomeScreen(
     navController: NavController,
@@ -60,7 +61,7 @@ fun HomeScreen(
 
     // Pager / Tabs
     val tabTitles = listOf("All", "Ready", "Opened", "Expired")
-    val pagerState = rememberPagerState(initialPage = 0)
+    val pagerState = rememberPagerState(initialPage = 0) { tabTitles.size }
 
     // Filter / Sort / Panel state
     var panelOpen by remember { mutableStateOf(false) } // slide-in panel
@@ -272,7 +273,7 @@ fun HomeScreen(
     ) { padding ->
         Box(modifier = Modifier.fillMaxSize().padding(padding)) {
             // HorizontalPager (swipe + animation)
-            HorizontalPager(count = tabTitles.size, state = pagerState, modifier = Modifier.fillMaxSize()) { page ->
+            HorizontalPager(state = pagerState, modifier = Modifier.fillMaxSize()) { page ->
                 val pageList = listsByTab.getOrElse(page) { emptyList() }
 
                 // Group by location in desired order

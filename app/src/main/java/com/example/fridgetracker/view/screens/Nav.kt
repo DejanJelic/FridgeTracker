@@ -16,8 +16,13 @@ import kotlinx.coroutines.launch
 fun AppNavHost(productViewModel: ProductViewModel,shoppingViewModel: ShoppingListViewModel,userProfileViewModel : UserProfileViewModel) {
     val navController = rememberNavController()
     NavHost(navController = navController, startDestination = "home") {
-        composable("home") { HomeScreen(navController,onAdd = { navController.navigate("add") }, onOpen = { id -> navController.navigate("edit/$id") },
-            vm = productViewModel) }
+        composable("home") {
+            HomeScreen(
+            navController,
+            onAdd = { navController.navigate("add") },
+            onOpen = { id -> navController.navigate("edit/$id") },
+            vm = productViewModel)
+        }
         composable("add") {
             EditProductScreen(
             navController = navController,

@@ -13,6 +13,8 @@ import androidx.navigation.NavController
 import com.example.fridgetracker.view.screens.shopping_list.*
 import com.example.fridgetracker.view_model.ShoppingListViewModel
 import com.example.fridgetracker.utilities.SnackbarType
+import com.example.fridgetracker.view_model.DeleteState
+import com.example.fridgetracker.view_model.SaveState
 import kotlinx.coroutines.launch
 
 @Composable
@@ -28,6 +30,47 @@ fun ShoppingListScreen(
     // State management
     val state = rememberShoppingListState(vm = vm)
 
+    val saveState by vm.saveState.collectAsState()
+    val deleteState by vm.deleteState.collectAsState()
+
+    LaunchedEffect(saveState) {
+        when (saveState) {
+            is SaveState.Success -> {
+                val successMsg = (saveState as SaveState.Success).message
+                state.showSnackbar(successMsg, SnackbarType.SUCCESS)
+                vm.resetSaveState()
+            }
+            is SaveState.Error -> {
+                val errorMsg = (saveState as SaveState.Error).message
+                state.showSnackbar(errorMsg, SnackbarType.ERROR)
+                vm.resetSaveState()
+            }
+            is SaveState.Loading -> {
+                state.showSnackbar("Saving...", SnackbarType.INFO)
+            }
+            SaveState.Idle -> {}
+        }
+    }
+
+    LaunchedEffect(deleteState) {
+        when (deleteState) {
+            is DeleteState.Success -> {
+                val successMsg = (deleteState as DeleteState.Success).message
+                state.showSnackbar(successMsg, SnackbarType.SUCCESS)
+                vm.resetDeleteState()
+            }
+            is DeleteState.Error -> {
+                val errorMsg = (deleteState as DeleteState.Error).message
+                state.showSnackbar(errorMsg, SnackbarType.ERROR)
+                vm.resetDeleteState()
+            }
+            is DeleteState.Loading -> {
+                state.showSnackbar("Deleting...", SnackbarType.INFO)
+            }
+            DeleteState.Idle -> {}
+        }
+    }
+
     Scaffold(
         scaffoldState = scaffoldState,
         topBar = {
@@ -37,11 +80,9 @@ fun ShoppingListScreen(
                 onSaveClick = {
                     keyboardController?.hide()
                     if (state.selectedListName != null) {
-                        // Update postojeće liste
                         state.updateCurrentList()
                         state.showSnackbar("List '${state.selectedListName}' updated", SnackbarType.SUCCESS)
                     } else {
-                        // Nova lista - otvori dialog
                         state.showSaveDialog = true
                         state.saveNameText = ""
                     }
