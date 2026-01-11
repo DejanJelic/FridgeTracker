@@ -52,6 +52,9 @@ import com.example.fridgetracker.model.ShoppingListWithItems
 import com.example.fridgetracker.utilities.CustomSnackbar
 import com.example.fridgetracker.utilities.SnackbarType
 import com.example.fridgetracker.view_model.ShoppingListViewModel
+import com.example.fridgetracker.ui.theme.AccentYellow
+import com.example.fridgetracker.ui.theme.ErrorRed
+import com.example.fridgetracker.ui.theme.PrimaryPurple
 import kotlinx.coroutines.CoroutineScope
 
 // Top Bar
@@ -64,7 +67,7 @@ fun ShoppingListTopBar(
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shadowElevation = 4.dp,
-        color = Color(0xFF6A1B9A),
+        color = PrimaryPurple,
         contentColor = Color.White
     ) {
         Row(
@@ -139,7 +142,7 @@ fun RowScope.ListSelectorDropdown(state: ShoppingListState) {
                                         Icon(
                                             Icons.Default.Check,
                                             contentDescription = null,
-                                            tint = Color(0xFF6A1B9A),
+                                            tint = PrimaryPurple,
                                             modifier = Modifier.size(20.dp)
                                         )
                                         Spacer(Modifier.width(8.dp))
@@ -157,7 +160,7 @@ fun RowScope.ListSelectorDropdown(state: ShoppingListState) {
                                         Icon(
                                             Icons.Default.Delete,
                                             contentDescription = "Delete list",
-                                            tint = Color(0xFFEF5350),
+                                            tint = ErrorRed,
                                             modifier = Modifier.size(18.dp)
                                         )
                                     }
@@ -282,7 +285,7 @@ fun SuggestionsCard(state: ShoppingListState) {
                     Icon(
                         Icons.Default.Add,
                         contentDescription = null,
-                        tint = Color(0xFF6A1B9A),
+                        tint = PrimaryPurple,
                         modifier = Modifier.size(20.dp)
                     )
                     Spacer(Modifier.width(12.dp))
@@ -367,11 +370,17 @@ class MockShoppingListViewModel : ShoppingListViewModel(
     ) {}
 )
 
+// Default suggestions for previews
+private val defaultSuggestions = listOf(
+    "Apple", "Banana", "Bread", "Butter", "Cheese", "Eggs", "Milk", "Yogurt"
+)
+
 // Dummy ShoppingListState za preview
 fun createMockShoppingListState(coroutineScope: CoroutineScope): ShoppingListState {
     return ShoppingListState(
         vm = MockShoppingListViewModel(),
-        coroutineScope = coroutineScope
+        coroutineScope = coroutineScope,
+        allSuggestions = defaultSuggestions
     ).apply {
         selectedListName = "Weekly Shopping"
 

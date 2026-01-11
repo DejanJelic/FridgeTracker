@@ -15,7 +15,11 @@ import com.example.fridgetracker.model.UserProfile
  * Main Room database for the app.
  * Includes all entities and migration logic.
  */
-@Database(entities = [Product::class, ShoppingListEntity::class,ShoppingListItemEntity::class, UserProfile::class ],  version = 6, exportSchema = false)
+@Database(
+    entities = [Product::class, ShoppingListEntity::class, ShoppingListItemEntity::class, UserProfile::class],
+    version = 6,
+    exportSchema = true
+)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun productDao(): ProductDao
     abstract fun shoppingListDao(): ShoppingListDao

@@ -5,14 +5,17 @@ import androidx.lifecycle.viewModelScope
 import com.example.fridgetracker.model.ShoppingListItemEntity
 import com.example.fridgetracker.model.ShoppingListWithItems
 import com.example.fridgetracker.repository.ShoppingListRepository
+import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import javax.inject.Inject
 
-open class ShoppingListViewModel(private val repo: ShoppingListRepository) : ViewModel() {
+@HiltViewModel
+open class ShoppingListViewModel @Inject constructor(private val repo: ShoppingListRepository) : ViewModel() {
 
     val listsState: StateFlow<List<ShoppingListWithItems>> =
         repo.observeAllLists()

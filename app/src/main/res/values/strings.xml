@@ -1,3 +1,32 @@
 <resources>
     <string name="app_name">FridgeTracker</string>
+
+    <!-- Shopping list suggestions -->
+    <string-array name="shopping_suggestions">
+        <item>Apple</item>
+        <item>Apricot</item>
+        <item>Banana</item>
+        <item>Blackberry</item>
+        <item>Blueberry</item>
+        <item>Bread</item>
+        <item>Butter</item>
+        <item>Carrot</item>
+        <item>Cheese</item>
+        <item>Cherry</item>
+        <item>Chicken</item>
+        <item>Clementine</item>
+        <item>Coconut</item>
+        <item>Cranberry</item>
+        <item>Date</item>
+        <item>Dragon fruit</item>
+        <item>Eggs</item>
+        <item>Garlic</item>
+        <item>Ham</item>
+        <item>Milk</item>
+        <item>Onion</item>
+        <item>Pasta</item>
+        <item>Potato</item>
+        <item>Tomato</item>
+        <item>Yogurt</item>
+    </string-array>
 </resources>

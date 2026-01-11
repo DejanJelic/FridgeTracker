@@ -15,6 +15,7 @@ import com.example.fridgetracker.view_model.ShoppingListViewModel
 import com.example.fridgetracker.utilities.SnackbarType
 import com.example.fridgetracker.view_model.DeleteState
 import com.example.fridgetracker.view_model.SaveState
+import com.example.fridgetracker.ui.theme.AccentYellow
 import kotlinx.coroutines.launch
 
 @Composable
@@ -112,7 +113,7 @@ fun ShoppingListScreen(
                         state.createNameText = ""
                     }
                 },
-                backgroundColor = Color(0xFFFFC107)
+                backgroundColor = AccentYellow
             ) {
                 Icon(
                     Icons.Default.Add,

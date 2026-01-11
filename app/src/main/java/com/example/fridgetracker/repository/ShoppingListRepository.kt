@@ -5,8 +5,11 @@ import com.example.fridgetracker.model.ShoppingListEntity
 import com.example.fridgetracker.model.ShoppingListItemEntity
 import com.example.fridgetracker.model.ShoppingListWithItems
 import kotlinx.coroutines.flow.Flow
+import javax.inject.Inject
+import javax.inject.Singleton
 
-open class ShoppingListRepository(private val dao: ShoppingListDao) {
+@Singleton
+open class ShoppingListRepository @Inject constructor(private val dao: ShoppingListDao) {
 
     fun observeAllLists(): Flow<List<ShoppingListWithItems>> = dao.getAllListsWithItemsFlow()
 

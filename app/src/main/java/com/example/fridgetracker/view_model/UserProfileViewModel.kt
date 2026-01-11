@@ -4,12 +4,15 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.fridgetracker.model.UserProfile
 import com.example.fridgetracker.repository.UserProfileRepository
+import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import javax.inject.Inject
 
-class UserProfileViewModel(private val repo: UserProfileRepository) : ViewModel() {
+@HiltViewModel
+class UserProfileViewModel @Inject constructor(private val repo: UserProfileRepository) : ViewModel() {
 
     val profileState: StateFlow<UserProfile?> = repo.observeProfile()
         .stateIn(viewModelScope, SharingStarted.Lazily, null)

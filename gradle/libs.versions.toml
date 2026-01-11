@@ -30,6 +30,8 @@ gsonVersion = "2.10.1"
 foundation = "1.9.2"
 accompanistPagerVersion = "0.36.0"
 accompanistIndicatorsVersion = "0.36.0"
+hilt = "2.51.1"
+hiltNavigationCompose = "1.2.0"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -69,9 +71,13 @@ androidx-gson = { group = "com.google.code.gson", name = "gson", version.ref = "
 androidx-foundation = { group = "androidx.compose.foundation", name = "foundation", version.ref = "foundation" }
 androidx-accompanist-pager = { group = "com.google.accompanist", name = "accompanist-pager", version.ref = "accompanistPagerVersion" }
 androidx-accompanist-indicators = { group = "com.google.accompanist", name = "accompanist-pager-indicators", version.ref = "accompanistIndicatorsVersion" }
+hilt-android = { group = "com.google.dagger", name = "hilt-android", version.ref = "hilt" }
+hilt-compiler = { group = "com.google.dagger", name = "hilt-android-compiler", version.ref = "hilt" }
+hilt-navigation-compose = { group = "androidx.hilt", name = "hilt-navigation-compose", version.ref = "hiltNavigationCompose" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
 kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 ksp = { id = "com.google.devtools.ksp", version.ref = "kspVersion" }
+hilt-android-plugin = { id = "com.google.dagger.hilt.android", version.ref = "hilt" }

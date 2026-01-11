@@ -1,6 +1,8 @@
 package com.example.fridgetracker.view.screens.shopping_list
 
+import android.content.Context
 import androidx.compose.runtime.*
+import com.example.fridgetracker.R
 import com.example.fridgetracker.model.ShoppingListItemEntity
 import com.example.fridgetracker.model.ShoppingListWithItems
 import com.example.fridgetracker.utilities.SnackbarType
@@ -12,7 +14,8 @@ import kotlinx.coroutines.launch
 @Stable
 class ShoppingListState(
     private val vm: ShoppingListViewModel,
-    private val coroutineScope: CoroutineScope
+    private val coroutineScope: CoroutineScope,
+    private val allSuggestions: List<String>
 ) {
     // Data
     val shoppingItems = mutableStateListOf<ShoppingListItemEntity>()
@@ -22,14 +25,6 @@ class ShoppingListState(
     // Search & Suggestions
     var searchQuery by mutableStateOf("")
     var showSuggestions by mutableStateOf(false)
-
-    val allSuggestions = listOf(
-        "Apple", "Apricot", "Banana", "Blackberry", "Blueberry",
-        "Cherry", "Clementine", "Coconut", "Cranberry", "Date",
-        "Dragon fruit", "Ham", "Carrot", "Milk", "Bread",
-        "Eggs", "Cheese", "Yogurt", "Butter", "Chicken",
-        "Tomato", "Potato", "Onion", "Garlic", "Pasta"
-    )
 
     val filteredSuggestions: List<String>
         get() = if (searchQuery.isBlank()) emptyList()
@@ -274,8 +269,15 @@ class ShoppingListState(
 
 @Composable
 fun rememberShoppingListState(vm: ShoppingListViewModel): ShoppingListState {
+    val context = androidx.compose.ui.platform.LocalContext.current
     val coroutineScope = rememberCoroutineScope()
-    val state = remember { ShoppingListState(vm, coroutineScope) }
+
+    // Load suggestions from resources
+    val suggestions = remember {
+        context.resources.getStringArray(R.array.shopping_suggestions).toList()
+    }
+
+    val state = remember { ShoppingListState(vm, coroutineScope, suggestions) }
 
     // Observe saved lists
     val savedLists by vm.listsState.collectAsState()

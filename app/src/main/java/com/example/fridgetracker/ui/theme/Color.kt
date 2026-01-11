@@ -64,6 +64,21 @@ val md_theme_dark_outline = Color(0xFF938F99)
 val AccentYellow = Color(0xFFFFC107)
 val ErrorRed = Color(0xFFEF5350)
 val SuccessGreen = Color(0xFF4CAF50)
+val InfoBlue = Color(0xFF2196F3)
+
+// Primary/Accent colors (za FAB, buttons, highlights)
+val PrimaryPurple = Color(0xFF6A1B9A)
+val PrimaryPurpleLight = Color(0xFF9C4DCC)
+val PrimaryPurpleDark = Color(0xFF38006B)
+
+// Category color (orange za kategorije)
+val CategoryOrange = Color(0xFFFB8C00)
+
+// Secondary text/location color
+val SecondaryGray = Color(0xFF90A4AE)
+
+// Badge color
+val BadgeRed = Color(0xFFFF0000)
 
 // Lokacijske boje
 val LocationColors = mapOf(
@@ -73,3 +88,6 @@ val LocationColors = mapOf(
     "Pantry" to Color(0xFFFFCA28),
     "Not stored" to Color(0xFF9E9E9E)
 )
+
+// Default location color
+val DefaultLocationColor = AccentYellow

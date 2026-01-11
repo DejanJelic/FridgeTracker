@@ -40,6 +40,13 @@ import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.TextUnit
+import com.example.fridgetracker.ui.theme.AccentYellow
+import com.example.fridgetracker.ui.theme.BadgeRed
+import com.example.fridgetracker.ui.theme.CategoryOrange
+import com.example.fridgetracker.ui.theme.DefaultLocationColor
+import com.example.fridgetracker.ui.theme.LocationColors
+import com.example.fridgetracker.ui.theme.PrimaryPurple
+import com.example.fridgetracker.ui.theme.SecondaryGray
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -95,15 +102,9 @@ fun HomeScreen(
     fun Product.isOpened(): Boolean = this.openedAtEpochDay != null
     fun Product.isReady(): Boolean = !isOpened() && !isExpired() && this.quantity > 0.0
 
-    // location colors - use same palette as your Location screen if present
-    val locationColors = mapOf(
-        "Fridge" to Color(0xFF42A5F5),
-        "Freezer" to Color(0xFFFF6026),
-        "Pantry" to Color(0xFFFFCA28),
-        "Larder" to Color(0xFFFFA726),
-        "Not stored" to Color(0xFF9E9E9E)
-    )
-    val defaultLocationColor = Color(0xFFFFC107)
+    // location colors - using theme colors
+    val locationColors = LocationColors
+    val defaultLocationColor = DefaultLocationColor
 
     // Derived list of categories (from products) for filter dropdown, include "All" first
     val categories = remember(products) {
@@ -189,7 +190,7 @@ fun HomeScreen(
                                 singleLine = true,
                                 modifier = Modifier.fillMaxWidth(),
                                 colors = TextFieldDefaults.textFieldColors(
-                                    backgroundColor = Color(0xFF6A1B9A),
+                                    backgroundColor = PrimaryPurple,
                                     focusedIndicatorColor = Color.Transparent,
                                     unfocusedIndicatorColor = Color.Transparent,
                                     textColor = Color.White,
@@ -198,7 +199,7 @@ fun HomeScreen(
                             )
                         }
                     },
-                    backgroundColor = Color(0xFF6A1B9A),
+                    backgroundColor = PrimaryPurple,
                     contentColor = Color.White,
                     navigationIcon = {
                         IconButton(onClick = { coroutineScope.launch { scaffoldState.drawerState.open() } }) {
@@ -265,7 +266,7 @@ fun HomeScreen(
         // HIDE FAB while panel is open to avoid overlap with APPLY
         floatingActionButton = {
             if (!panelOpen) {
-                FloatingActionButton(onClick = onAdd, backgroundColor = Color(0xFFFFC107)) {
+                FloatingActionButton(onClick = onAdd, backgroundColor = AccentYellow) {
                     Icon(Icons.Default.Add, contentDescription = "Add")
                 }
             }
@@ -425,7 +426,7 @@ fun HomeScreen(
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Text("Ascending")
                                 Spacer(modifier = Modifier.width(12.dp))
-                                Switch(checked = ascLocal, onCheckedChange = { ascLocal = it }, colors = SwitchDefaults.colors(checkedThumbColor = Color(0xFFFFC107)))
+                                Switch(checked = ascLocal, onCheckedChange = { ascLocal = it }, colors = SwitchDefaults.colors(checkedThumbColor = AccentYellow))
                                 Spacer(modifier = Modifier.weight(1f))
                                 TextButton(onClick = {
                                     // reset UI state
@@ -465,7 +466,7 @@ fun HomeScreen(
                                 ascending = ascLocal
                                 // close panel
                                 panelOpen = false
-                            }, modifier = Modifier.weight(1f), colors = ButtonDefaults.buttonColors(backgroundColor = Color(0xFFFFC107))) {
+                            }, modifier = Modifier.weight(1f), colors = ButtonDefaults.buttonColors(backgroundColor = AccentYellow)) {
                                 Text("APPLY", color = Color.Black)
                             }
                         }
@@ -483,7 +484,7 @@ fun SmallBadge(count: Int, modifier: Modifier = Modifier, size: Dp = 18.dp, text
         modifier = modifier
             .size(size)
             .clip(RoundedCornerShape(50))
-            .background(Color.Red),
+            .background(BadgeRed),
         contentAlignment = Alignment.Center
     ) {
         Text(text = count.toString(), color = Color.White, fontSize = textSize, textAlign = TextAlign.Center, fontWeight = FontWeight.Bold)
@@ -569,7 +570,7 @@ fun EmptyStateCard(
                     .fillMaxWidth()
                     .padding(24.dp),
                 shape = RoundedCornerShape(20.dp),
-                border = BorderStroke(2.dp, Color(0xFF6A1B9A)),
+                border = BorderStroke(2.dp, PrimaryPurple),
                 backgroundColor = Color.White,
                 elevation = 2.dp
             ) {
@@ -657,7 +658,7 @@ fun ProductCard(
             .padding(horizontal = 12.dp, vertical = 8.dp)
             .clickable { onClick() },
         shape = RoundedCornerShape(14.dp),
-        border = BorderStroke(2.dp, Color(0xFF6A1B9A)),
+        border = BorderStroke(2.dp, PrimaryPurple),
         elevation = 2.dp
     ) {
         Row(modifier = Modifier.padding(10.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -699,11 +700,11 @@ fun ProductCard(
 
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     if (!product.category.isNullOrBlank()) {
-                        Text(text = product.category, color = Color(0xFFFB8C00), maxLines = 1, style = MaterialTheme.typography.body2)
+                        Text(text = product.category, color = CategoryOrange, maxLines = 1, style = MaterialTheme.typography.body2)
                     }
                     Spacer(modifier = Modifier.width(8.dp))
                     if (!product.location.isNullOrBlank()) {
-                        Text(text = product.location, color = Color(0xFF90A4AE), maxLines = 1, style = MaterialTheme.typography.body2)
+                        Text(text = product.location, color = SecondaryGray, maxLines = 1, style = MaterialTheme.typography.body2)
                     }
                 }
             }
