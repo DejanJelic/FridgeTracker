@@ -27,7 +27,7 @@ interface ProductDao {
     suspend fun upsert(product: Product): Long
 
     @Delete
-    suspend fun delete(product: Product)
+    suspend fun delete(product: Product): Int
 
     @Query("SELECT * FROM products WHERE bestBeforeEpochDay <= :threshold")
     suspend fun getExpiringBefore(threshold: Long): List<Product>

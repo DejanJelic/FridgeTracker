@@ -21,20 +21,20 @@ interface ShoppingListDao {
     suspend fun insertList(list: ShoppingListEntity): Long
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertItems(items: List<ShoppingListItemEntity>)
+    suspend fun insertItems(items: List<ShoppingListItemEntity>): List<Long>
 
     @Query("DELETE FROM shopping_list_items WHERE listId = :listId")
-    suspend fun deleteItemsForList(listId: Long)
+    suspend fun deleteItemsForList(listId: Long): Int
 
     @Delete
-    suspend fun deleteList(list: ShoppingListEntity)
+    suspend fun deleteList(list: ShoppingListEntity): Int
 
     @Query("DELETE FROM shopping_list_items WHERE id = :itemId")
-    suspend fun deleteItemById(itemId: Long)
+    suspend fun deleteItemById(itemId: Long): Int
 
     @Update
-    suspend fun updateItem(item: ShoppingListItemEntity)
+    suspend fun updateItem(item: ShoppingListItemEntity): Int
 
     @Update
-    suspend fun updateList(list: ShoppingListEntity)
+    suspend fun updateList(list: ShoppingListEntity): Int
 }

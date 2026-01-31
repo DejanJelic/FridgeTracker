@@ -360,12 +360,12 @@ class MockShoppingListViewModel : ShoppingListViewModel(
             }
             override suspend fun getListWithItemsById(id: Long): ShoppingListWithItems? = null
             override suspend fun insertList(list: ShoppingListEntity): Long = 1L
-            override suspend fun insertItems(items: List<ShoppingListItemEntity>) {}
-            override suspend fun deleteItemsForList(listId: Long) {}
-            override suspend fun deleteList(list: ShoppingListEntity) {}
-            override suspend fun deleteItemById(itemId: Long) {}
-            override suspend fun updateItem(item: ShoppingListItemEntity) {}
-            override suspend fun updateList(list: ShoppingListEntity) {}
+            override suspend fun insertItems(items: List<ShoppingListItemEntity>): List<Long> = emptyList()
+            override suspend fun deleteItemsForList(listId: Long): Int = 0
+            override suspend fun deleteList(list: ShoppingListEntity): Int = 0
+            override suspend fun deleteItemById(itemId: Long): Int = 0
+            override suspend fun updateItem(item: ShoppingListItemEntity): Int = 0
+            override suspend fun updateList(list: ShoppingListEntity): Int = 0
         }
     ) {}
 )

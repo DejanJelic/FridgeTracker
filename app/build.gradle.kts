@@ -3,14 +3,7 @@ plugins {
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.hilt.android.plugin)
-    kotlin("kapt")
-}
-
-kapt {
-    correctErrorTypes = true
-    arguments {
-        arg("room.schemaLocation", "$projectDir/schemas")
-    }
+    alias(libs.plugins.ksp)
 }
 
 android {
@@ -63,7 +56,7 @@ dependencies {
     implementation(libs.androidx.room.runtime)
     implementation(libs.androidx.room.ktx)
     implementation(libs.androidx.foundation)
-    kapt(libs.androidx.room.compiler)
+    ksp(libs.androidx.room.compiler)
     //Work
     implementation(libs.androidx.work)
     //Camera
@@ -86,7 +79,7 @@ dependencies {
 
     // Hilt
     implementation(libs.hilt.android)
-    kapt(libs.hilt.compiler)
+    ksp(libs.hilt.compiler)
     implementation(libs.hilt.navigation.compose)
 
     implementation(libs.androidx.core.ktx)
